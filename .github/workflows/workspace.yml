@@ -27,8 +27,8 @@ on:
       android_emulator:
         description: Boot an Android Emulator runtime (requires KVM)
         required: false
-        default: false
-        type: boolean
+        default: 'false'
+        type: string
 
 permissions:
   contents: read
@@ -75,7 +75,7 @@ jobs:
             api/package-lock.json
 
       - name: Prepare Android emulator
-        if: ${{ inputs.android_emulator }}
+        if: ${{ inputs.android_emulator == 'true' }}
         run: |
           set -euo pipefail
           echo "Stage: Preparing Android Emulator"
