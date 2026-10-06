@@ -32,9 +32,7 @@ export default async function Home() {
         </div>
       </section>
       <section className="lower-grid">
-        <div className="card terminal"><div className="card-head"><div><span className="label">TERMINAL</span><h2>Workspace console</h2></div><span className="pill muted">Waiting</span></div><pre><code>{"$ mobile-dev-cloud start lukma
-> workspace not started
-> connect GitHub and start a workspace"}</code></pre></div>
+        <div className="card terminal"><div className="card-head"><div><span className="label">TERMINAL</span><h2>Workspace console</h2></div><span className="pill muted">Waiting</span></div><pre><code>{"$ mobile-dev-cloud start lukma\\n> workspace not started\\n> connect GitHub and start a workspace"}</code></pre></div>
         <div className="card"><div className="card-head"><div><span className="label">SERVICES</span><h2>Runtime stack</h2></div></div><div className="service-list">{services.map((service) => <div className="service" key={service.name}><div><strong>{service.name}</strong><span>{service.detail}</span></div><span className={service.status === "Ready" ? "status ready" : "status planned"}>{service.status}</span></div>)}</div></div>
       </section>
     </main>
