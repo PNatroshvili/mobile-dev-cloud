@@ -108,5 +108,6 @@ export async function listWorkflowRuns(token: string, workflowId?: string) {
     html_url: string;
     head_sha: string;
     created_at: string;
+    actor?: { login: string };
   }> }>(`/repos/PNatroshvili/mobile-dev-cloud${suffix}`, token);
 }
