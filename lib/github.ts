@@ -90,6 +90,10 @@ export async function getWorkflowJobs(token: string, runId: string) {
   );
 }
 
+export async function getWorkflowJobSteps(token: string, jobId: number) {
+  return githubFetch<{ steps: Array<{ name: string; status: string; conclusion: string | null }> }>(`/repos/PNatroshvili/mobile-dev-cloud/actions/jobs/${encodeURIComponent(String(jobId))}`, token);
+}
+
 export async function getWorkflowJobLogs(token: string, jobId: number) {
   const response = await fetch(
     `${API}/repos/PNatroshvili/mobile-dev-cloud/actions/jobs/${encodeURIComponent(String(jobId))}/logs`,
