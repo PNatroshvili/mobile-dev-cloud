@@ -32,6 +32,9 @@ jobs:
   workspace:
     runs-on: ubuntu-latest
     timeout-minutes: 65
+    env:
+      CLOUDFLARED_VERSION: 2026.10.0
+      CLOUDFLARED_SHA256: d33ff2d14475178d2012c2c56beba87389ac5ded27649519f198a7d3134a99db
     steps:
       - name: Create scoped GitHub App token
         id: app-token
@@ -42,7 +45,7 @@ jobs:
           owner: ${{ github.repository_owner }}
 
       - name: Checkout mobile app
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ inputs.mobile_repo }}
           ref: ${{ inputs.mobile_ref }}
@@ -58,14 +61,22 @@ jobs:
           path: api
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            mobile/package-lock.json
+            api/package-lock.json
 
-      - name: Install Cloudflare Tunnel
+      - name: Install pinned Cloudflare Tunnel
         run: |
-          curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /tmp/cloudflared
+          set -euo pipefail
+          url="https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-linux-amd64"
+          curl -fsSL "$url" -o /tmp/cloudflared
+          echo "${CLOUDFLARED_SHA256}  /tmp/cloudflared" | sha256sum -c -
           chmod +x /tmp/cloudflared
+          /tmp/cloudflared --version
 
       - name: Start backend
         working-directory: api
@@ -84,9 +95,9 @@ jobs:
           S3_REGION=us-east-1
           S3_BUCKET=lukma-dev
           S3_ACCESS_KEY=lukma_dev
-          S3_SECRET_KEY=change-me
-          JWT_ACCESS_SECRET=mobile-dev-cloud-dev-access
-          JWT_REFRESH_SECRET=mobile-dev-cloud-dev-refresh
+          S3_SECRET_KEY=${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}-s3
+          JWT_ACCESS_SECRET=${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}-access
+          JWT_REFRESH_SECRET=${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}-refresh
           SMTP_HOST=127.0.0.1
           SMTP_PORT=1025
           SMTP_SECURE=false
@@ -102,6 +113,7 @@ jobs:
       - name: Start API tunnel
         run: |
           nohup /tmp/cloudflared tunnel --no-autoupdate --url http://127.0.0.1:3000 > /tmp/api-tunnel.log 2>&1 &
+          echo $! > /tmp/api-tunnel.pid
           for i in $(seq 1 60); do API_URL=$(grep -oE 'https://[-a-z0-9]+\.trycloudflare\.com' /tmp/api-tunnel.log | head -1 || true); [ -n "$API_URL" ] && break; sleep 2; done
           test -n "${API_URL:-}" || { cat /tmp/api-tunnel.log; exit 1; }
           echo "API_URL=$API_URL" >> "$GITHUB_ENV"
@@ -114,6 +126,7 @@ jobs:
           if [ ! -f package.json ]; then echo 'Mobile repository is not accessible or is invalid.'; exit 1; fi
           npm ci
           nohup npx expo start --web --port 8081 --non-interactive > /tmp/expo.log 2>&1 &
+          echo $! > /tmp/expo.pid
           for i in $(seq 1 90); do curl -fsS http://127.0.0.1:8081 >/dev/null 2>&1 && exit 0; sleep 2; done
           cat /tmp/expo.log
           exit 1
@@ -122,6 +135,7 @@ jobs:
         id: preview
         run: |
           nohup /tmp/cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8081 > /tmp/web-tunnel.log 2>&1 &
+          echo $! > /tmp/web-tunnel.pid
           for i in $(seq 1 60); do WEB_URL=$(grep -oE 'https://[-a-z0-9]+\.trycloudflare\.com' /tmp/web-tunnel.log | head -1 || true); [ -n "$WEB_URL" ] && break; sleep 2; done
           test -n "${WEB_URL:-}" || { cat /tmp/web-tunnel.log; exit 1; }
           echo "url=$WEB_URL" >> "$GITHUB_OUTPUT"
@@ -140,6 +154,13 @@ jobs:
           cat /tmp/lukma-api.log
           exit 1
 
+      - name: Verify runtime endpoints
+        run: |
+          set -euo pipefail
+          curl -fsS http://127.0.0.1:3000/health/ready >/dev/null
+          curl -fsSI --max-time 15 "$WEB_URL" >/dev/null
+          echo "Runtime endpoint checks passed." >> "$GITHUB_STEP_SUMMARY"
+
       - name: Keep workspace alive
         run: |
           MINUTES=${{ inputs.session_minutes }}
@@ -148,3 +169,26 @@ jobs:
           echo "Preview: ${{ steps.preview.outputs.url }}"
           echo "Workspace ready: ${{ steps.preview.outputs.url }}"
           sleep $((MINUTES * 60))
+      - name: Collect runtime diagnostics
+        if: always()
+        run: |
+          echo "### Runtime diagnostics" >> "$GITHUB_STEP_SUMMARY"
+          for file in /tmp/lukma-api.log /tmp/api-tunnel.log /tmp/expo.log /tmp/web-tunnel.log; do
+            if [ -f "$file" ]; then
+              echo "<details><summary>$(basename "$file")</summary>" >> "$GITHUB_STEP_SUMMARY"
+              echo '````text`' >> "$GITHUB_STEP_SUMMARY"
+              tail -n 40 "$file" >> "$GITHUB_STEP_SUMMARY" || true
+              echo '`````' >> "$GITHUB_STEP_SUMMARY"
+              echo "</details>" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+
+      - name: Cleanup workspace
+        if: always()
+        working-directory: api
+        run: |
+          if [ -f /tmp/web-tunnel.pid ]; then kill "$(cat /tmp/web-tunnel.pid)" || true; fi
+          if [ -f /tmp/api-tunnel.pid ]; then kill "$(cat /tmp/api-tunnel.pid)" || true; fi
+          if [ -f /tmp/expo.pid ]; then kill "$(cat /tmp/expo.pid)" || true; fi
+          if [ -f /tmp/lukma-api.pid ]; then kill "$(cat /tmp/lukma-api.pid)" || true; fi
+          docker compose down --volumes --remove-orphans || true
