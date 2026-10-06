@@ -12,6 +12,7 @@ export function WorkspaceControls({ connected }: { connected: boolean }) {
   const [branch, setBranch] = useState("feature/home-discovery-foundation");
   const [loading, setLoading] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [stopping, setStopping] = useState(false);
   const [message, setMessage] = useState("");
   const [runUrl, setRunUrl] = useState("");
   const [runId, setRunId] = useState<number | null>(null);
@@ -76,6 +77,7 @@ export function WorkspaceControls({ connected }: { connected: boolean }) {
   }, [connected, repo]);
 
   const selectedRepo = useMemo(() => repos.find((item) => item.full_name === repo), [repos, repo]);
+  const active = Boolean(runId && runStatus && runStatus !== "completed");
 
   async function startWorkspace() {
     if (!repo || !branch) return;
@@ -111,6 +113,22 @@ export function WorkspaceControls({ connected }: { connected: boolean }) {
     }
   }
 
+  async function stopWorkspace() {
+    if (!runId || stopping) return;
+    setStopping(true);
+    setMessage("");
+    try {
+      const response = await fetch(`/api/workspaces/${runId}/stop`, { method: "POST" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to stop workspace.");
+      setMessage("Stop requested. Workspace will shut down shortly.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to stop workspace.");
+    } finally {
+      setStopping(false);
+    }
+  }
+
   if (!connected) {
     return <p className="hint">Connect GitHub to discover your repositories and branches.</p>;
   }
@@ -120,22 +138,29 @@ export function WorkspaceControls({ connected }: { connected: boolean }) {
       <div className="controls">
         <label>
           Repository
-          <select value={repo} onChange={(event) => setRepo(event.target.value)}>
+          <select value={repo} onChange={(event) => setRepo(event.target.value)} disabled={active}>
             {repos.length === 0 && <option value={repo}>{repo}</option>}
             {repos.map((item) => <option key={item.id} value={item.full_name}>{item.full_name}</option>)}
           </select>
         </label>
         <label>
           Branch
-          <select value={branch} onChange={(event) => setBranch(event.target.value)} disabled={loading}>
+          <select value={branch} onChange={(event) => setBranch(event.target.value)} disabled={loading || active}>
             {branches.length === 0 && <option value={branch}>{branch}</option>}
             {branches.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}
           </select>
         </label>
       </div>
-      <button className="primary" onClick={startWorkspace} disabled={starting || !selectedRepo || !branch}>
-        {starting ? "Starting workspace…" : "Start workspace"}
-      </button>
+      <div className="workspace-actions">
+        <button className="primary" onClick={startWorkspace} disabled={starting || stopping || active || !selectedRepo || !branch}>
+          {starting ? "Starting workspace…" : "Start workspace"}
+        </button>
+        {active && (
+          <button className="secondary danger" onClick={stopWorkspace} disabled={stopping}>
+            {stopping ? "Stopping…" : "Stop workspace"}
+          </button>
+        )}
+      </div>
       {runStatus && (
         <p className="hint">
           Workspace: {runStatus === "completed" ? (runConclusion === "success" ? "ready" : `failed (${runConclusion ?? "unknown"})`) : runStatus}
