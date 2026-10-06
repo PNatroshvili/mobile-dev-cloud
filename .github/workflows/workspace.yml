@@ -146,4 +146,5 @@ jobs:
           case "$MINUTES" in ''|*[!0-9]*) MINUTES=30;; esac
           [ "$MINUTES" -ge 5 ] && [ "$MINUTES" -le 60 ] || MINUTES=30
           echo "Preview: ${{ steps.preview.outputs.url }}"
+          echo "Workspace ready: ${{ steps.preview.outputs.url }}"
           sleep $((MINUTES * 60))
