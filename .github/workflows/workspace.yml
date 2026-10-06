@@ -54,7 +54,7 @@ jobs:
         with:
           repository: ${{ inputs.api_repo }}
           ref: ${{ inputs.api_ref }}
-          token: ${{ github.token }}
+          token: ${{ steps.app-token.outputs.token }}
           path: api
 
       - name: Setup Node
@@ -77,7 +77,7 @@ jobs:
           NODE_ENV=development
           PORT=3000
           HOST=0.0.0.0
-          CORS_ORIGINS=*
+          CORS_ORIGINS=https://placeholder.invalid
           DATABASE_URL=postgres://lukma:lukma_dev@127.0.0.1:5432/lukma
           REDIS_URL=redis://127.0.0.1:6379
           S3_ENDPOINT=http://127.0.0.1:9000
