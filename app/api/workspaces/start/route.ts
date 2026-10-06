@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const apiRef = typeof body?.apiRef === "string" ? body.apiRef : null;
   const minutes = String(body?.minutes ?? "30");
 
-  if (!validRepo(mobileRepo) || !validRepo(apiRepo) || !mobileRef || !apiRef) {
+  if (!mobileRepo || !apiRepo || !mobileRef || !apiRef || !validRepo(mobileRepo) || !validRepo(apiRepo)) {
     return NextResponse.json({ error: "Invalid workspace configuration." }, { status: 400 });
   }
 
