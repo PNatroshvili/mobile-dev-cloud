@@ -12,6 +12,9 @@ type WorkspaceData = {
   html_url: string;
   head_sha: string;
   preview_url: string | null;
+  api_url: string | null;
+  stage: string | null;
+  config: { mobile_repo: string | null; mobile_ref: string | null; api_repo: string | null; api_ref: string | null; minutes: string | null };
   logs: string[];
 };
 
@@ -61,6 +64,8 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
       .then((data: { run?: WorkspaceData | null } | null) => {
         if (data?.run) {
           setRun(data.run);
+          if (data.run.config.mobile_repo) setRepo(data.run.config.mobile_repo);
+          if (data.run.config.mobile_ref) setBranch(data.run.config.mobile_ref);
           setMessage("Recovered your latest workspace session.");
         }
       })
@@ -116,6 +121,8 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
   const tone = statusTone(run?.status ?? "", run?.conclusion ?? null);
   const label = statusLabel(run?.status ?? "", run?.conclusion ?? null);
   const preview = run?.preview_url ?? "";
+  const apiUrl = run?.api_url ?? "";
+  const stage = run?.stage ?? label;
 
   async function startWorkspace() {
     if (!repo || !branch) return;
@@ -145,6 +152,9 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
           html_url: data.run.html_url ?? "",
           head_sha: data.run.head_sha ?? "",
           preview_url: null,
+          api_url: null,
+          stage: "Starting backend",
+          config: { mobile_repo: repo, mobile_ref: branch, api_repo: "PNatroshvili/lukma-api", api_ref: "feat/auth-api", minutes: "30" },
           logs: [],
         });
       }
@@ -253,6 +263,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
                 <span className={"status " + tone}>{label}</span>
                 {run?.head_sha && <span>commit {run.head_sha.slice(0, 7)}</span>}
                 {run?.id && <span>run #{run.id}</span>}
+                {stage && <span>{stage}</span>}
               </div>
               {message && <p className="hint">{message}</p>}
               {run?.html_url && <p className="hint"><a href={run.html_url} target="_blank" rel="noreferrer">Open GitHub Actions run →</a></p>}
@@ -279,7 +290,10 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
               </div>
             )}
           </div>
-          {preview && <a className="preview-link" href={preview} target="_blank" rel="noreferrer">Open preview in a new tab ↗</a>}
+          <div className="preview-links">
+            {preview && <a className="preview-link" href={preview} target="_blank" rel="noreferrer">Open preview in a new tab ↗</a>}
+            {apiUrl && <a className="preview-link" href={apiUrl} target="_blank" rel="noreferrer">Open API ↗</a>}
+          </div>
         </div>
       </section>
 
@@ -296,7 +310,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
           <div className="card-head"><div><span className="label">SERVICES</span><h2>Runtime stack</h2></div></div>
           <div className="service-list">
             {services.map((service, index) => {
-              const serviceStatus = !run ? (index < 2 ? "Ready" : "Planned") : index < 2 ? (run.status === "completed" && run.conclusion !== "success" ? "Error" : "Ready") : index === 2 ? (preview ? "Live" : active ? "Booting" : "Ready") : "Planned";
+              const serviceStatus = !run ? (index === 0 ? "Ready" : "Planned") : index === 0 ? "Ready" : index === 1 ? (run.status === "completed" && run.conclusion !== "success" ? "Error" : run.api_url ? "Live" : active ? "Booting" : "Ready") : index === 2 ? (preview ? "Live" : active ? "Booting" : "Ready") : "Planned";
               const serviceClass = serviceStatus === "Error" ? "status error" : serviceStatus === "Planned" ? "status planned" : "status ready";
               return <div className="service" key={service.name}><div><strong>{service.name}</strong><span>{service.detail}</span></div><span className={serviceClass}>{serviceStatus}</span></div>;
             })}
