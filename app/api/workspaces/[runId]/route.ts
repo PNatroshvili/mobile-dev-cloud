@@ -94,6 +94,7 @@ export async function GET(
       phase: runtimePhase(run.status, run.conclusion, currentStep, runtime.stage),
       error,
       config: { mobile_repo: runtime.mobileRepo, mobile_ref: runtime.mobileRef, api_repo: runtime.apiRepo, api_ref: runtime.apiRef, minutes: runtime.minutes },
+      runtime: { backend: Boolean(runtime.apiUrl), api_tunnel: Boolean(runtime.apiUrl), expo: Boolean(runtime.previewUrl), preview: Boolean(runtime.previewUrl), android: false },
       logs,
     });
   } catch (error) {

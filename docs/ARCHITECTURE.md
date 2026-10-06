@@ -33,7 +33,9 @@ Docker is the first runtime abstraction. It can later move to a VM or container 
 Lowest-cost preview. Start Expo Web inside the workspace and expose it to the browser.
 
 ### Android Emulator
-A Linux host runs Android Emulator with hardware acceleration where available. Emulator display and input are streamed to the browser. This is the resource-heavy part and is intentionally isolated from the free control plane.
+A Linux runtime will run Android Emulator with hardware acceleration where available. Emulator display and input are streamed to the browser. This is the resource-heavy part and is intentionally isolated from the free control plane.
+
+The workspace API exposes a stable runtime capability contract for backend, API tunnel, Expo, preview, and Android. Android remains explicitly `false` until an emulator-capable runner and browser streaming transport are attached, so the dashboard never implies native Android readiness prematurely.
 
 ## Security
 - GitHub tokens never enter browser JavaScript.

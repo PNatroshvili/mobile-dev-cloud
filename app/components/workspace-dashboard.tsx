@@ -18,6 +18,7 @@ type WorkspaceData = {
   error: string | null;
   config: { mobile_repo: string | null; mobile_ref: string | null; api_repo: string | null; api_ref: string | null; minutes: string | null };
   logs: string[];
+  runtime: { backend: boolean; api_tunnel: boolean; expo: boolean; preview: boolean; android: boolean };
 };
 
 const services = [
@@ -132,6 +133,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
   const stage = run?.stage ?? label;
   const phase = run?.phase ?? "starting";
   const runtimeError = run?.error ?? "";
+  const runtime = run?.runtime;
 
   async function startWorkspace() {
     if (!repo || !branch) return;
@@ -167,6 +169,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
           error: null,
           config: { mobile_repo: repo, mobile_ref: branch, api_repo: "PNatroshvili/lukma-api", api_ref: "feat/auth-api", minutes: "30" },
           logs: [],
+          runtime: { backend: false, api_tunnel: false, expo: false, preview: false, android: false },
         });
       }
     } catch (error) {
@@ -323,7 +326,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
           <div className="card-head"><div><span className="label">SERVICES</span><h2>Runtime stack</h2></div></div>
           <div className="service-list">
             {services.map((service, index) => {
-              const serviceStatus = !run ? (index === 0 ? "Ready" : "Planned") : index === 0 ? "Ready" : index === 1 ? (run.status === "completed" && run.conclusion === "cancelled" ? "Stopped" : run.status === "completed" && run.conclusion !== "success" ? "Error" : run.api_url ? "Live" : active ? "Booting" : "Ready") : index === 2 ? (preview ? "Live" : active ? "Booting" : "Ready") : "Planned";
+              const serviceStatus = !run ? (index === 0 ? "Ready" : "Planned") : index === 0 ? "Ready" : index === 1 ? (run.status === "completed" && run.conclusion === "cancelled" ? "Stopped" : run.status === "completed" && run.conclusion !== "success" ? "Error" : runtime?.backend ? "Live" : active ? "Booting" : "Ready") : index === 2 ? (runtime?.preview ? "Live" : active ? "Booting" : "Ready") : runtime?.android ? "Live" : "Planned";
               const serviceClass = serviceStatus === "Error" ? "status error" : serviceStatus === "Planned" || serviceStatus === "Stopped" ? "status planned" : "status ready";
               return <div className="service" key={service.name}><div><strong>{service.name}</strong><span>{service.detail}</span></div><span className={serviceClass}>{serviceStatus}</span></div>;
             })}
