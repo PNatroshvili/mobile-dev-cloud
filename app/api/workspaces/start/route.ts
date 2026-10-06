@@ -45,7 +45,10 @@ export async function POST(request: Request) {
     let run = null;
     for (let attempt = 0; attempt < 10; attempt += 1) {
       const runs = await listWorkflowRuns(session.token, "workspace.yml");
-      run = runs.workflow_runs.find((candidate) => Date.parse(candidate.created_at) >= dispatchedAt - 10_000) ?? null;
+      run = runs.workflow_runs.find((candidate) =>
+        candidate.actor?.login === session.login &&
+        Date.parse(candidate.created_at) >= dispatchedAt - 10_000,
+      ) ?? null;
       if (run) break;
       await new Promise((resolve) => setTimeout(resolve, 1_000));
     }
