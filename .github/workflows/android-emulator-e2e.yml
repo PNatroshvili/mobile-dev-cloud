@@ -25,10 +25,14 @@ jobs:
         run: |
           set -euo pipefail
           export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          export ANDROID_AVD_HOME="$HOME/.android/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
           export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator:$PATH"
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platform-tools" "emulator" "platforms;android-35" "system-images;android-35;google_apis;x86_64"
-          echo "no" | avdmanager create avd --name mobile-dev-cloud-e2e --package "system-images;android-35;google_apis;x86_64" --force
+          printf "no\n" | avdmanager create avd --name mobile-dev-cloud-e2e --package "system-images;android-35;google_apis;x86_64" --force
+          avdmanager list avd
+          test -f "$ANDROID_AVD_HOME/mobile-dev-cloud-e2e.ini"
           emulator -avd mobile-dev-cloud-e2e -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -accel on > /tmp/emulator.log 2>&1 &
           echo $! > /tmp/emulator.pid
           adb start-server
