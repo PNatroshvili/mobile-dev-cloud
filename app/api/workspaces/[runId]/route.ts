@@ -22,6 +22,21 @@ function extractRuntime(rawLogs: string) {
   return { previewUrl, apiUrl, mobileRepo, mobileRef, apiRepo, apiRef, minutes, stage: stages.at(-1) ?? null };
 }
 
+
+function runtimePhase(status: string, conclusion: string | null, step: string | null, stage: string | null) {
+  if (status === "queued") return "queued";
+  if (status === "completed") return conclusion === "success" ? "ready" : conclusion === "cancelled" ? "cancelled" : "failed";
+  const value = `${step ?? ""} ${stage ?? ""}`.toLowerCase();
+  if (value.includes("backend")) return "backend";
+  if (value.includes("api tunnel")) return "api_tunnel";
+  if (value.includes("expo")) return "expo";
+  if (value.includes("preview")) return "preview";
+  if (value.includes("cors") || value.includes("verif")) return "verifying";
+  if (value.includes("workspace ready")) return "ready";
+  if (value.includes("stop")) return "stopping";
+  return "starting";
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ runId: string }> },
@@ -76,6 +91,7 @@ export async function GET(
       preview_url: runtime.previewUrl,
       api_url: runtime.apiUrl,
       stage: currentStep ?? runtime.stage,
+      phase: runtimePhase(run.status, run.conclusion, currentStep, runtime.stage),
       error,
       config: { mobile_repo: runtime.mobileRepo, mobile_ref: runtime.mobileRef, api_repo: runtime.apiRepo, api_ref: runtime.apiRef, minutes: runtime.minutes },
       logs,
