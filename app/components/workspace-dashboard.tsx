@@ -55,6 +55,19 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
   }, [connected]);
 
   useEffect(() => {
+    if (!connected || run) return;
+    fetch("/api/workspaces/current", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data: { run?: WorkspaceData | null } | null) => {
+        if (data?.run) {
+          setRun(data.run);
+          setMessage("Recovered your latest workspace session.");
+        }
+      })
+      .catch(() => {});
+  }, [connected, run]);
+
+  useEffect(() => {
     if (!connected || !repo) return;
     const [owner, name] = repo.split("/");
     if (!owner || !name) return;
