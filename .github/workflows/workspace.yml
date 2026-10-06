@@ -374,7 +374,6 @@ jobs:
           docker compose down --volumes --remove-orphans || true
 
           echo "Android Emulator runtime is ready." >> "$GITHUB_STEP_SUMMARY"
-
       - name: Install pinned Cloudflare Tunnel
         run: |
           set -euo pipefail
