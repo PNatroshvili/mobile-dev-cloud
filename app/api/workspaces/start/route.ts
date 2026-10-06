@@ -1,0 +1,55 @@
+import { NextResponse } from "next/server";
+import { dispatchWorkflow } from "@/lib/github";
+import { readSession } from "@/lib/session";
+
+const OWNER = "PNatroshvili";
+const PLATFORM_REPO = "mobile-dev-cloud";
+
+function validRepo(value: unknown) {
+  return typeof value === "string" && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(value);
+}
+
+export async function POST(request: Request) {
+  const session = await readSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body = await request.json().catch(() => null) as Record<string, unknown> | null;
+  const mobileRepo = body?.mobileRepo;
+  const mobileRef = body?.mobileRef;
+  const apiRepo = body?.apiRepo;
+  const apiRef = body?.apiRef;
+  const minutes = String(body?.minutes ?? "30");
+
+  if (!validRepo(mobileRepo) || !validRepo(apiRepo) || typeof mobileRef !== "string" || typeof apiRef !== "string") {
+    return NextResponse.json({ error: "Invalid workspace configuration." }, { status: 400 });
+  }
+
+  if (!mobileRepo.startsWith(OWNER + "/") || !apiRepo.startsWith(OWNER + "/")) {
+    return NextResponse.json({ error: "Only repositories owned by the connected GitHub account are supported by this workspace." }, { status: 403 });
+  }
+
+  if (!/^([5-9]|[1-5][0-9]|60)$/.test(minutes)) {
+    return NextResponse.json({ error: "Workspace lifetime must be between 5 and 60 minutes." }, { status: 400 });
+  }
+
+  try {
+    await dispatchWorkflow(session.token, "workspace.yml", "main", {
+      mobile_repo: mobileRepo,
+      mobile_ref: mobileRef,
+      api_repo: apiRepo,
+      api_ref: apiRef,
+      session_minutes: minutes,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      repository: PLATFORM_REPO,
+      status: "queued",
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Unable to start workspace." },
+      { status: 502 },
+    );
+  }
+}
