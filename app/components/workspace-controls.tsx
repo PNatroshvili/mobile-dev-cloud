@@ -13,6 +13,7 @@ export function WorkspaceControls({ connected }: { connected: boolean }) {
   const [loading, setLoading] = useState(false);
   const [starting, setStarting] = useState(false);
   const [message, setMessage] = useState("");
+  const [runUrl, setRunUrl] = useState("");
 
   useEffect(() => {
     if (!connected) return;
@@ -44,6 +45,7 @@ export function WorkspaceControls({ connected }: { connected: boolean }) {
     if (!repo || !branch) return;
     setStarting(true);
     setMessage("");
+    setRunUrl("");
     try {
       const response = await fetch("/api/workspaces/start", {
         method: "POST",
@@ -58,7 +60,8 @@ export function WorkspaceControls({ connected }: { connected: boolean }) {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to start workspace.");
-      setMessage("Workspace queued. Open the run in GitHub while the runtime starts.");
+      setMessage(data.status === "in_progress" ? "Workspace is starting." : "Workspace queued.");
+      if (data.run?.html_url) setRunUrl(data.run.html_url);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to start workspace.");
     } finally {
@@ -92,6 +95,7 @@ export function WorkspaceControls({ connected }: { connected: boolean }) {
         {starting ? "Starting workspace…" : "Start workspace"}
       </button>
       {message && <p className="hint">{message}</p>}
+      {runUrl && <p className="hint"><a href={runUrl} target="_blank" rel="noreferrer">Open GitHub Actions run →</a></p>}
     </>
   );
 }
