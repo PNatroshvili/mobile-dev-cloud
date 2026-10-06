@@ -40,7 +40,6 @@ export async function listBranches(token: string, owner: string, repo: string) {
   return githubFetch<GitHubBranch[]>(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/branches?per_page=100`, token);
 }
 
-
 export async function dispatchWorkflow(
   token: string,
   workflowId: string,
@@ -96,9 +95,9 @@ export async function getWorkflowRun(token: string, runId: string) {
     conclusion: string | null;
     html_url: string;
     head_sha: string;
+    actor?: { login: string };
   }>(`/repos/PNatroshvili/mobile-dev-cloud/actions/runs/${encodeURIComponent(runId)}`, token);
 }
-
 
 export async function listWorkflowRuns(token: string, workflowId?: string) {
   const suffix = workflowId ? `/actions/workflows/${encodeURIComponent(workflowId)}/runs?per_page=10` : "/actions/runs?per_page=10";
