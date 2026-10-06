@@ -14,6 +14,7 @@ type WorkspaceData = {
   preview_url: string | null;
   api_url: string | null;
   stage: string | null;
+  phase: string;
   error: string | null;
   config: { mobile_repo: string | null; mobile_ref: string | null; api_repo: string | null; api_ref: string | null; minutes: string | null };
   logs: string[];
@@ -124,6 +125,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
   const preview = run?.preview_url ?? "";
   const apiUrl = run?.api_url ?? "";
   const stage = run?.stage ?? label;
+  const phase = run?.phase ?? "starting";
   const runtimeError = run?.error ?? "";
 
   async function startWorkspace() {
@@ -156,6 +158,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
           preview_url: null,
           api_url: null,
           stage: "Starting backend",
+          phase: "backend",
           error: null,
           config: { mobile_repo: repo, mobile_ref: branch, api_repo: "PNatroshvili/lukma-api", api_ref: "feat/auth-api", minutes: "30" },
           logs: [],
@@ -267,6 +270,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
                 {run?.head_sha && <span>commit {run.head_sha.slice(0, 7)}</span>}
                 {run?.id && <span>run #{run.id}</span>}
                 {stage && <span>{stage}</span>}
+                <span>phase {phase.replaceAll("_", " ")}</span>
               </div>
               {message && <p className="hint">{message}</p>}
               {runtimeError && <p className="hint error-copy">{runtimeError}</p>}
