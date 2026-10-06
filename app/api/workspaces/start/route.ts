@@ -13,13 +13,13 @@ export async function POST(request: Request) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
-  const mobileRepo = body?.mobileRepo;
-  const mobileRef = body?.mobileRef;
-  const apiRepo = body?.apiRepo;
-  const apiRef = body?.apiRef;
+  const mobileRepo = typeof body?.mobileRepo === "string" ? body.mobileRepo : null;
+  const mobileRef = typeof body?.mobileRef === "string" ? body.mobileRef : null;
+  const apiRepo = typeof body?.apiRepo === "string" ? body.apiRepo : null;
+  const apiRef = typeof body?.apiRef === "string" ? body.apiRef : null;
   const minutes = String(body?.minutes ?? "30");
 
-  if (!validRepo(mobileRepo) || !validRepo(apiRepo) || typeof mobileRef !== "string" || typeof apiRef !== "string") {
+  if (!validRepo(mobileRepo) || !validRepo(apiRepo) || !mobileRef || !apiRef) {
     return NextResponse.json({ error: "Invalid workspace configuration." }, { status: 400 });
   }
 
