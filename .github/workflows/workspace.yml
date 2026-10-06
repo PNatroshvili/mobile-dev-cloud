@@ -1,0 +1,129 @@
+name: Mobile Workspace
+
+on:
+  workflow_dispatch:
+    inputs:
+      mobile_repo:
+        description: Mobile repository (owner/name)
+        required: true
+        type: string
+      mobile_ref:
+        description: Mobile branch or commit
+        required: true
+        type: string
+      api_repo:
+        description: Backend repository (owner/name)
+        required: true
+        type: string
+      api_ref:
+        description: Backend branch or commit
+        required: true
+        type: string
+      session_minutes:
+        description: Workspace lifetime (5-60 minutes)
+        required: false
+        default: '30'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  workspace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - name: Checkout mobile app
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.mobile_repo }}
+          ref: ${{ inputs.mobile_ref }}
+          token: ${{ github.token }}
+          path: mobile
+
+      - name: Checkout backend
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.api_repo }}
+          ref: ${{ inputs.api_ref }}
+          token: ${{ github.token }}
+          path: api
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Cloudflare Tunnel
+        run: |
+          curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /tmp/cloudflared
+          chmod +x /tmp/cloudflared
+
+      - name: Start backend
+        working-directory: api
+        run: |
+          if [ ! -f package.json ]; then echo 'Backend repository is not accessible or is invalid.'; exit 1; fi
+          docker compose up -d postgres redis mailpit || true
+          npm ci
+          cat > .env <<'EOF'
+          NODE_ENV=development
+          PORT=3000
+          HOST=0.0.0.0
+          CORS_ORIGINS=*
+          DATABASE_URL=postgres://lukma:lukma_dev@127.0.0.1:5432/lukma
+          REDIS_URL=redis://127.0.0.1:6379
+          S3_ENDPOINT=http://127.0.0.1:9000
+          S3_REGION=us-east-1
+          S3_BUCKET=lukma
+          S3_ACCESS_KEY=lukma_dev
+          S3_SECRET_KEY=change-me
+          JWT_ACCESS_SECRET=mobile-dev-cloud-dev-access
+          JWT_REFRESH_SECRET=mobile-dev-cloud-dev-refresh
+          SMTP_HOST=127.0.0.1
+          SMTP_PORT=1025
+          SMTP_SECURE=false
+          SMTP_FROM=noreply@lukma.local
+          EOF
+          npm run db:migrate || true
+          nohup npm run start:dev > /tmp/lukma-api.log 2>&1 &
+          for i in $(seq 1 60); do curl -fsS http://127.0.0.1:3000/health/ready && exit 0; sleep 2; done
+          cat /tmp/lukma-api.log
+          exit 1
+
+      - name: Start API tunnel
+        run: |
+          nohup /tmp/cloudflared tunnel --no-autoupdate --url http://127.0.0.1:3000 > /tmp/api-tunnel.log 2>&1 &
+          for i in $(seq 1 60); do API_URL=$(grep -oE 'https://[-a-z0-9]+\.trycloudflare\.com' /tmp/api-tunnel.log | head -1 || true); [ -n "$API_URL" ] && break; sleep 2; done
+          test -n "${API_URL:-}" || { cat /tmp/api-tunnel.log; exit 1; }
+          echo "API_URL=$API_URL" >> "$GITHUB_ENV"
+
+      - name: Start Expo web
+        working-directory: mobile
+        env:
+          EXPO_PUBLIC_API_URL: ${{ env.API_URL }}
+        run: |
+          if [ ! -f package.json ]; then echo 'Mobile repository is not accessible or is invalid.'; exit 1; fi
+          npm ci
+          nohup npx expo start --web --port 8081 --non-interactive > /tmp/expo.log 2>&1 &
+          for i in $(seq 1 90); do curl -fsS http://127.0.0.1:8081 >/dev/null 2>&1 && exit 0; sleep 2; done
+          cat /tmp/expo.log
+          exit 1
+
+      - name: Start preview tunnel
+        id: preview
+        run: |
+          nohup /tmp/cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8081 > /tmp/web-tunnel.log 2>&1 &
+          for i in $(seq 1 60); do WEB_URL=$(grep -oE 'https://[-a-z0-9]+\.trycloudflare\.com' /tmp/web-tunnel.log | head -1 || true); [ -n "$WEB_URL" ] && break; sleep 2; done
+          test -n "${WEB_URL:-}" || { cat /tmp/web-tunnel.log; exit 1; }
+          echo "url=$WEB_URL" >> "$GITHUB_OUTPUT"
+          echo "## Mobile Dev Cloud" >> "$GITHUB_STEP_SUMMARY"
+          echo "Preview: $WEB_URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "API: $API_URL" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep workspace alive
+        run: |
+          MINUTES=${{ inputs.session_minutes }}
+          case "$MINUTES" in ''|*[!0-9]*) MINUTES=30;; esac
+          [ "$MINUTES" -ge 5 ] && [ "$MINUTES" -le 60 ] || MINUTES=30
+          echo "Preview: ${{ steps.preview.outputs.url }}"
+          sleep $((MINUTES * 60))
