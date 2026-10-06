@@ -66,6 +66,29 @@ export async function dispatchWorkflow(
   }
 }
 
+export async function getWorkflowJobs(token: string, runId: string) {
+  return githubFetch<{ jobs: Array<{ id: number; name: string; status: string; conclusion: string | null }> }>(
+    `/repos/PNatroshvili/mobile-dev-cloud/actions/runs/${encodeURIComponent(runId)}/jobs?per_page=20`,
+    token,
+  );
+}
+
+export async function getWorkflowJobLogs(token: string, jobId: number) {
+  const response = await fetch(
+    `${API}/repos/PNatroshvili/mobile-dev-cloud/actions/jobs/${encodeURIComponent(String(jobId))}/logs`,
+    {
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+      cache: "no-store",
+    },
+  );
+  if (!response.ok) throw new Error(`GitHub job logs returned ${response.status}`);
+  return response.text();
+}
+
 export async function getWorkflowRun(token: string, runId: string) {
   return githubFetch<{
     id: number;
