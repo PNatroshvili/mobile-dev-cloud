@@ -33,6 +33,23 @@ export async function POST(request: Request) {
   }
 
   try {
+    const existingRuns = await listWorkflowRuns(session.token, "workspace.yml");
+    const activeRun = existingRuns.workflow_runs.find(
+      (candidate) =>
+        candidate.actor?.login === session.login &&
+        (candidate.status === "queued" || candidate.status === "in_progress"),
+    );
+
+    if (activeRun) {
+      return NextResponse.json(
+        {
+          error: "A workspace is already running for this GitHub account.",
+          run: activeRun,
+        },
+        { status: 409 },
+      );
+    }
+
     const dispatchedAt = Date.now();
     await dispatchWorkflow(session.token, "workspace.yml", "main", {
       mobile_repo: mobileRepo,
