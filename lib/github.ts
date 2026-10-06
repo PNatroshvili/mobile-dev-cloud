@@ -39,3 +39,39 @@ export async function listRepositories(token: string) {
 export async function listBranches(token: string, owner: string, repo: string) {
   return githubFetch<GitHubBranch[]>(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/branches?per_page=100`, token);
 }
+
+
+export async function dispatchWorkflow(
+  token: string,
+  workflowId: string,
+  ref: string,
+  inputs: Record<string, string>,
+) {
+  const response = await fetch(
+    `${API}/repos/PNatroshvili/mobile-dev-cloud/actions/workflows/${encodeURIComponent(workflowId)}/dispatches`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "X-GitHub-Api-Version": "2026-03-10",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ ref, inputs }),
+    },
+  );
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`GitHub workflow dispatch failed (${response.status}): ${detail.slice(0, 300)}`);
+  }
+}
+
+export async function getWorkflowRun(token: string, runId: string) {
+  return githubFetch<{
+    id: number;
+    status: string;
+    conclusion: string | null;
+    html_url: string;
+    head_sha: string;
+  }>(`/repos/PNatroshvili/mobile-dev-cloud/actions/runs/${encodeURIComponent(runId)}`, token);
+}
