@@ -81,6 +81,12 @@ jobs:
       - name: Start backend
         working-directory: api
         run: |
+          echo "Stage: Starting backend"
+          echo "Workspace mobile repo: ${{ inputs.mobile_repo }}"
+          echo "Workspace mobile ref: ${{ inputs.mobile_ref }}"
+          echo "Workspace API repo: ${{ inputs.api_repo }}"
+          echo "Workspace API ref: ${{ inputs.api_ref }}"
+          echo "Workspace minutes: ${{ inputs.session_minutes }}"
           if [ ! -f package.json ]; then echo 'Backend repository is not accessible or is invalid.'; exit 1; fi
           docker compose up -d postgres redis minio mailpit
           npm ci
@@ -112,6 +118,7 @@ jobs:
 
       - name: Start API tunnel
         run: |
+          echo "Stage: Creating API tunnel"
           nohup /tmp/cloudflared tunnel --no-autoupdate --url http://127.0.0.1:3000 > /tmp/api-tunnel.log 2>&1 &
           echo $! > /tmp/api-tunnel.pid
           for i in $(seq 1 60); do API_URL=$(grep -oE 'https://[-a-z0-9]+\.trycloudflare\.com' /tmp/api-tunnel.log | head -1 || true); [ -n "$API_URL" ] && break; sleep 2; done
@@ -123,6 +130,7 @@ jobs:
         env:
           EXPO_PUBLIC_API_URL: ${{ env.API_URL }}
         run: |
+          echo "Stage: Starting Expo Web"
           if [ ! -f package.json ]; then echo 'Mobile repository is not accessible or is invalid.'; exit 1; fi
           npm ci
           nohup npx expo start --web --port 8081 --non-interactive > /tmp/expo.log 2>&1 &
@@ -134,6 +142,7 @@ jobs:
       - name: Start preview tunnel
         id: preview
         run: |
+          echo "Stage: Creating preview tunnel"
           nohup /tmp/cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8081 > /tmp/web-tunnel.log 2>&1 &
           echo $! > /tmp/web-tunnel.pid
           for i in $(seq 1 60); do WEB_URL=$(grep -oE 'https://[-a-z0-9]+\.trycloudflare\.com' /tmp/web-tunnel.log | head -1 || true); [ -n "$WEB_URL" ] && break; sleep 2; done
@@ -146,6 +155,7 @@ jobs:
       - name: Align API CORS with preview
         working-directory: api
         run: |
+          echo "Stage: Aligning API CORS"
           sed -i "s|^CORS_ORIGINS=.*|CORS_ORIGINS=$WEB_URL|" .env
           if [ -f /tmp/lukma-api.pid ]; then kill "$(cat /tmp/lukma-api.pid)" || true; fi
           nohup npm run start:dev > /tmp/lukma-api.log 2>&1 &
@@ -156,6 +166,7 @@ jobs:
 
       - name: Verify runtime endpoints
         run: |
+          echo "Stage: Verifying runtime"
           set -euo pipefail
           curl -fsS http://127.0.0.1:3000/health/ready >/dev/null
           curl -fsSI --max-time 15 "$WEB_URL" >/dev/null
@@ -163,6 +174,7 @@ jobs:
 
       - name: Keep workspace alive
         run: |
+          echo "Stage: Workspace ready"
           MINUTES=${{ inputs.session_minutes }}
           case "$MINUTES" in ''|*[!0-9]*) MINUTES=30;; esac
           [ "$MINUTES" -ge 5 ] && [ "$MINUTES" -le 60 ] || MINUTES=30
