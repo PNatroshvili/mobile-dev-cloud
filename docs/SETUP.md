@@ -48,3 +48,9 @@ An Android emulator requires KVM and considerably more CPU/RAM than the browser 
 
 ## Security
 Never commit .env files, GitHub tokens, OAuth client secrets, emulator credentials, or production database secrets. Keep the GitHub App installation restricted to the two required private repositories and keep its repository permission read-only.
+
+
+## Workspace recovery and runtime status
+The control plane reads machine-readable runtime markers from the GitHub Actions job logs. These markers expose the selected mobile/API repositories and refs, requested lifetime, current runtime stage, API tunnel URL, and Expo preview URL without storing repository credentials in the browser.
+
+When the browser session is refreshed, the latest workspace is recovered from GitHub Actions and the selected mobile repository/ref are restored when the runtime emitted that configuration. API and workspace URLs remain short-lived runtime values.
