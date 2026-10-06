@@ -28,13 +28,18 @@ const services = [
 ];
 
 function statusLabel(status: string, conclusion: string | null) {
-  if (status === "completed") return conclusion === "success" ? "Ready" : "Failed";
+  if (status === "completed") {
+    if (conclusion === "success") return "Ready";
+    if (conclusion === "cancelled") return "Cancelled";
+    return "Failed";
+  }
   if (status === "queued") return "Queued";
   if (status === "in_progress") return "Running";
   return status ? status.replaceAll("_", " ") : "Waiting";
 }
 
 function statusTone(status: string, conclusion: string | null) {
+  if (status === "completed" && conclusion === "cancelled") return "planned";
   if (status === "completed" && conclusion !== "success") return "error";
   if (status === "completed" || status === "in_progress") return "ready";
   return "planned";
@@ -206,7 +211,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
     : run
       ? [
           "$ mobile-dev-cloud start lukma",
-          "> workspace " + (run.status === "completed" ? (run.conclusion === "success" ? "ready" : "failed") : run.status),
+          "> workspace " + (run.status === "completed" ? (run.conclusion === "success" ? "ready" : run.conclusion === "cancelled" ? "cancelled" : "failed") : run.status),
           "> waiting for runtime logs…",
         ]
       : [
@@ -318,8 +323,8 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
           <div className="card-head"><div><span className="label">SERVICES</span><h2>Runtime stack</h2></div></div>
           <div className="service-list">
             {services.map((service, index) => {
-              const serviceStatus = !run ? (index === 0 ? "Ready" : "Planned") : index === 0 ? "Ready" : index === 1 ? (run.status === "completed" && run.conclusion !== "success" ? "Error" : run.api_url ? "Live" : active ? "Booting" : "Ready") : index === 2 ? (preview ? "Live" : active ? "Booting" : "Ready") : "Planned";
-              const serviceClass = serviceStatus === "Error" ? "status error" : serviceStatus === "Planned" ? "status planned" : "status ready";
+              const serviceStatus = !run ? (index === 0 ? "Ready" : "Planned") : index === 0 ? "Ready" : index === 1 ? (run.status === "completed" && run.conclusion === "cancelled" ? "Stopped" : run.status === "completed" && run.conclusion !== "success" ? "Error" : run.api_url ? "Live" : active ? "Booting" : "Ready") : index === 2 ? (preview ? "Live" : active ? "Booting" : "Ready") : "Planned";
+              const serviceClass = serviceStatus === "Error" ? "status error" : serviceStatus === "Planned" || serviceStatus === "Stopped" ? "status planned" : "status ready";
               return <div className="service" key={service.name}><div><strong>{service.name}</strong><span>{service.detail}</span></div><span className={serviceClass}>{serviceStatus}</span></div>;
             })}
           </div>
