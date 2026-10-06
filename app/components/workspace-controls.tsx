@@ -17,6 +17,7 @@ export function WorkspaceControls({ connected }: { connected: boolean }) {
   const [runId, setRunId] = useState<number | null>(null);
   const [runStatus, setRunStatus] = useState<string>("");
   const [runConclusion, setRunConclusion] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState("");
 
   useEffect(() => {
     if (!connected) return;
@@ -39,6 +40,7 @@ export function WorkspaceControls({ connected }: { connected: boolean }) {
         setRunStatus(data.status ?? "");
         setRunConclusion(data.conclusion ?? null);
         if (data.html_url) setRunUrl(data.html_url);
+        if (data.preview_url) setPreviewUrl(data.preview_url);
         if (data.status === "completed") return;
       } catch {
         // Keep polling; transient status failures should not interrupt the workspace.
@@ -79,6 +81,7 @@ export function WorkspaceControls({ connected }: { connected: boolean }) {
     setRunId(null);
     setRunStatus("queued");
     setRunConclusion(null);
+    setPreviewUrl("");
     try {
       const response = await fetch("/api/workspaces/start", {
         method: "POST",
@@ -135,6 +138,9 @@ export function WorkspaceControls({ connected }: { connected: boolean }) {
         </p>
       )}
       {message && <p className="hint">{message}</p>}
+      {previewUrl && (
+        <p className="hint"><a href={previewUrl} target="_blank" rel="noreferrer">Open Live Preview →</a></p>
+      )}
       {runUrl && <p className="hint"><a href={runUrl} target="_blank" rel="noreferrer">Open GitHub Actions run →</a></p>}
     </>
   );
