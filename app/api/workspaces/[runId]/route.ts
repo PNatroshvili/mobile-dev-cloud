@@ -16,6 +16,10 @@ export async function GET(
 
   try {
     const run = await getWorkflowRun(session.token, runId);
+    if (run.actor?.login !== session.login) {
+      return NextResponse.json({ error: "Workspace run does not belong to the connected GitHub account." }, { status: 403 });
+    }
+
     let previewUrl: string | null = null;
 
     const jobs = await getWorkflowJobs(session.token, runId);
