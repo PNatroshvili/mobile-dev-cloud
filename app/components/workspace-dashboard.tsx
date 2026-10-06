@@ -155,6 +155,20 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
     }
   }
 
+  async function refreshWorkspace() {
+    if (!run?.id) return;
+    setMessage("Refreshing workspace status…");
+    try {
+      const response = await fetch("/api/workspaces/" + run.id, { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to refresh workspace.");
+      setRun(data as WorkspaceData);
+      setMessage("Workspace status refreshed.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to refresh workspace.");
+    }
+  }
+
   async function stopWorkspace() {
     if (!run?.id || stopping) return;
     setStopping(true);
@@ -230,9 +244,10 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
               </div>
               <div className="workspace-actions">
                 <button className="primary" onClick={startWorkspace} disabled={starting || stopping || active || !selectedRepo || !branch}>
-                  {starting ? "Starting workspace…" : "Start workspace"}
+                  {starting ? "Starting workspace…" : active ? "Workspace running" : "Start new workspace"}
                 </button>
                 {active && <button className="secondary danger" onClick={stopWorkspace} disabled={stopping}>{stopping ? "Stopping…" : "Stop workspace"}</button>}
+                {run && !active && <button className="secondary" onClick={refreshWorkspace}>Refresh status</button>}
               </div>
               <div className="workspace-meta">
                 <span className={"status " + tone}>{label}</span>
