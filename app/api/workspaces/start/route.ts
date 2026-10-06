@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { dispatchWorkflow } from "@/lib/github";
+import { dispatchWorkflow, listWorkflowRuns } from "@/lib/github";
 import { readSession } from "@/lib/session";
 
-const OWNER = "PNatroshvili";
 const PLATFORM_REPO = "mobile-dev-cloud";
 
 function validRepo(value: unknown) {
@@ -24,7 +23,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid workspace configuration." }, { status: 400 });
   }
 
-  if (!mobileRepo.startsWith(OWNER + "/") || !apiRepo.startsWith(OWNER + "/")) {
+  const owner = session.login;
+  if (!mobileRepo.startsWith(owner + "/") || !apiRepo.startsWith(owner + "/")) {
     return NextResponse.json({ error: "Only repositories owned by the connected GitHub account are supported by this workspace." }, { status: 403 });
   }
 
@@ -41,11 +41,9 @@ export async function POST(request: Request) {
       session_minutes: minutes,
     });
 
-    return NextResponse.json({
-      ok: true,
-      repository: PLATFORM_REPO,
-      status: "queued",
-    });
+    const runs = await listWorkflowRuns(session.token, "workspace.yml");
+    const run = runs.workflow_runs[0];
+    return NextResponse.json({ ok: true, repository: PLATFORM_REPO, status: run?.status ?? "queued", run });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unable to start workspace." },
