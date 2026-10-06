@@ -75,3 +75,16 @@ export async function getWorkflowRun(token: string, runId: string) {
     head_sha: string;
   }>(`/repos/PNatroshvili/mobile-dev-cloud/actions/runs/${encodeURIComponent(runId)}`, token);
 }
+
+
+export async function listWorkflowRuns(token: string, workflowId?: string) {
+  const suffix = workflowId ? `/actions/workflows/${encodeURIComponent(workflowId)}/runs?per_page=10` : "/actions/runs?per_page=10";
+  return githubFetch<{ workflow_runs: Array<{
+    id: number;
+    status: string;
+    conclusion: string | null;
+    html_url: string;
+    head_sha: string;
+    created_at: string;
+  }> }>(`/repos/PNatroshvili/mobile-dev-cloud${suffix}`, token);
+}
