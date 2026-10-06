@@ -24,6 +24,11 @@ on:
         required: false
         default: '30'
         type: string
+      android_emulator:
+        description: Run Android emulator capability preflight
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -68,6 +73,25 @@ jobs:
           cache-dependency-path: |
             mobile/package-lock.json
             api/package-lock.json
+
+      - name: Android emulator capability preflight
+        if: ${{ inputs.android_emulator }}
+        run: |
+          echo "Stage: Android emulator preflight"
+          set -euo pipefail
+          echo "Runner: $RUNNER_NAME"
+          echo "OS: $RUNNER_OS"
+          echo "Architecture: $RUNNER_ARCH"
+          if [ -e /dev/kvm ]; then
+            echo "/dev/kvm: present"
+            ls -l /dev/kvm
+          else
+            echo "/dev/kvm: unavailable"
+          fi
+          echo "CPU virtualization flags:"
+          grep -Eo 'vmx|svm' /proc/cpuinfo | sort -u | tr '\n' ' ' || true
+          echo
+          echo "Android emulator preflight completed. Emulator installation/boot is intentionally not enabled yet."
 
       - name: Install pinned Cloudflare Tunnel
         run: |
