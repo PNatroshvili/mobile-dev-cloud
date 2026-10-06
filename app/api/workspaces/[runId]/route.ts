@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getWorkflowRun } from "@/lib/github";
+import { getWorkflowJobs, getWorkflowJobLogs, getWorkflowRun } from "@/lib/github";
 import { readSession } from "@/lib/session";
 
 export async function GET(
@@ -16,12 +16,24 @@ export async function GET(
 
   try {
     const run = await getWorkflowRun(session.token, runId);
+    let previewUrl: string | null = null;
+
+    if (run.status === "completed" && run.conclusion === "success") {
+      const jobs = await getWorkflowJobs(session.token, runId);
+      const workspaceJob = jobs.jobs.find((job) => job.name === "workspace");
+      if (workspaceJob) {
+        const logs = await getWorkflowJobLogs(session.token, workspaceJob.id);
+        previewUrl = logs.match(/Preview:\s+(https:\/\/[-a-z0-9]+\.trycloudflare\.com)/)?.[1] ?? null;
+      }
+    }
+
     return NextResponse.json({
       id: run.id,
       status: run.status,
       conclusion: run.conclusion,
       html_url: run.html_url,
       head_sha: run.head_sha,
+      preview_url: previewUrl,
     });
   } catch (error) {
     return NextResponse.json(
