@@ -94,6 +94,7 @@ jobs:
           EOF
           npm run db:migrate
           nohup npm run start:dev > /tmp/lukma-api.log 2>&1 &
+          echo $! > /tmp/lukma-api.pid
           for i in $(seq 1 60); do curl -fsS http://127.0.0.1:3000/health/ready && exit 0; sleep 2; done
           cat /tmp/lukma-api.log
           exit 1
@@ -127,6 +128,17 @@ jobs:
           echo "## Mobile Dev Cloud" >> "$GITHUB_STEP_SUMMARY"
           echo "Preview: $WEB_URL" >> "$GITHUB_STEP_SUMMARY"
           echo "API: $API_URL" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Align API CORS with preview
+        working-directory: api
+        run: |
+          sed -i "s|^CORS_ORIGINS=.*|CORS_ORIGINS=$WEB_URL|" .env
+          if [ -f /tmp/lukma-api.pid ]; then kill "$(cat /tmp/lukma-api.pid)" || true; fi
+          nohup npm run start:dev > /tmp/lukma-api.log 2>&1 &
+          echo $! > /tmp/lukma-api.pid
+          for i in $(seq 1 60); do curl -fsS http://127.0.0.1:3000/health/ready && exit 0; sleep 2; done
+          cat /tmp/lukma-api.log
+          exit 1
 
       - name: Keep workspace alive
         run: |
