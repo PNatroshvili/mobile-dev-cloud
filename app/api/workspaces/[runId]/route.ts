@@ -18,12 +18,14 @@ export async function GET(
     const run = await getWorkflowRun(session.token, runId);
     let previewUrl: string | null = null;
 
-    if (run.status === "completed" && run.conclusion === "success") {
-      const jobs = await getWorkflowJobs(session.token, runId);
-      const workspaceJob = jobs.jobs.find((job) => job.name === "workspace");
-      if (workspaceJob) {
+    const jobs = await getWorkflowJobs(session.token, runId);
+    const workspaceJob = jobs.jobs.find((job) => job.name === "workspace");
+    if (workspaceJob && (workspaceJob.status === "in_progress" || run.status === "completed")) {
+      try {
         const logs = await getWorkflowJobLogs(session.token, workspaceJob.id);
         previewUrl = logs.match(/Preview:\s+(https:\/\/[-a-z0-9]+\.trycloudflare\.com)/)?.[1] ?? null;
+      } catch {
+        // Logs may not be available until GitHub finishes indexing the job.
       }
     }
 
