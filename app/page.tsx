@@ -1,4 +1,5 @@
 import { readSession } from "@/lib/session";
+import { WorkspaceControls } from "@/app/components/workspace-controls";
 
 const services = [
   { name: "GitHub", status: "Ready", detail: "Repository integration" },
@@ -22,9 +23,7 @@ export default async function Home() {
         <div className="card workspace-card">
           <div className="card-head"><div><span className="label">WORKSPACE</span><h2>LUKMA</h2></div><span className="pill">{session ? "GitHub connected" : "Connect GitHub first"}</span></div>
           <div className="repo-row"><div className="repo-icon">GH</div><div><strong>PNatroshvili/lukma-mobile</strong><span>React Native · Expo · TypeScript</span></div></div>
-          <div className="controls"><label>Repository<select defaultValue="lukma"><option value="lukma">PNatroshvili/lukma-mobile</option></select></label><label>Branch<select defaultValue="feature/home-discovery-foundation"><option>feature/home-discovery-foundation</option><option>main</option></select></label></div>
-          <button className="primary" disabled={!session}>Start workspace</button>
-          {!session && <p className="hint">GitHub connection unlocks repository and branch discovery.</p>}
+          <WorkspaceControls connected={Boolean(session)} />
         </div>
         <div className="card preview-card">
           <div className="card-head"><div><span className="label">LIVE PREVIEW</span><h2>Browser device</h2></div><span className="pill muted">Not started</span></div>
