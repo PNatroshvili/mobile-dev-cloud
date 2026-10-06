@@ -8,7 +8,8 @@ function unb64(value: string) { return new Uint8Array(Buffer.from(value, "base64
 
 async function key() {
   if (secret().length < 32) throw new Error("SESSION_SECRET must be at least 32 characters.");
-  return crypto.subtle.importKey("raw", new TextEncoder().encode(secret()), "AES-GCM", false, ["encrypt", "decrypt"]);
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(secret()));
+  return crypto.subtle.importKey("raw", digest, "AES-GCM", false, ["encrypt", "decrypt"]);
 }
 
 export async function createSession(token: string, login: string) {
