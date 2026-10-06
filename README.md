@@ -25,3 +25,21 @@ GitHub repository -> cloud workspace -> backend + Expo runtime -> live browser p
 5. Terminal and logs
 6. Android cloud emulator
 7. Build artifacts
+
+
+## Current implementation
+
+- Next.js + TypeScript control plane
+- GitHub OAuth with encrypted HTTP-only sessions
+- Repository and branch API endpoints
+- Workspace start API
+- Docker foundation for PostgreSQL, Redis and Mailpit
+- Workspace runtime Docker image
+- GitHub Actions CI for typecheck, lint and build
+- Architecture and setup documentation
+
+## Runtime direction
+
+The next runtime layer uses GitHub Actions as the first free compute pool, with Expo/Metro and the LUKMA backend running on an ephemeral Linux workspace. The browser preview is exposed through a temporary tunnel. A GitHub App is the preferred way to grant short-lived access to private LUKMA repositories.
+
+See docs/ARCHITECTURE.md and docs/SETUP.md.
