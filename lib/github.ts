@@ -65,6 +65,24 @@ export async function dispatchWorkflow(
   }
 }
 
+export async function cancelWorkflowRun(token: string, runId: string) {
+  const response = await fetch(
+    `${API}/repos/PNatroshvili/mobile-dev-cloud/actions/runs/${encodeURIComponent(runId)}/cancel`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    },
+  );
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`GitHub workflow cancellation failed (${response.status}): ${detail.slice(0, 300)}`);
+  }
+}
+
 export async function getWorkflowJobs(token: string, runId: string) {
   return githubFetch<{ jobs: Array<{ id: number; name: string; status: string; conclusion: string | null }> }>(
     `/repos/PNatroshvili/mobile-dev-cloud/actions/runs/${encodeURIComponent(runId)}/jobs?per_page=20`,
