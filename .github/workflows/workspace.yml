@@ -33,12 +33,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 65
     steps:
+      - name: Create scoped GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.MOBILE_DEV_CLOUD_APP_ID }}
+          private-key: ${{ secrets.MOBILE_DEV_CLOUD_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - name: Checkout mobile app
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.mobile_repo }}
           ref: ${{ inputs.mobile_ref }}
-          token: ${{ github.token }}
+          token: ${{ steps.app-token.outputs.token }}
           path: mobile
 
       - name: Checkout backend
@@ -63,7 +71,7 @@ jobs:
         working-directory: api
         run: |
           if [ ! -f package.json ]; then echo 'Backend repository is not accessible or is invalid.'; exit 1; fi
-          docker compose up -d postgres redis mailpit || true
+          docker compose up -d postgres redis minio mailpit
           npm ci
           cat > .env <<'EOF'
           NODE_ENV=development
@@ -74,7 +82,7 @@ jobs:
           REDIS_URL=redis://127.0.0.1:6379
           S3_ENDPOINT=http://127.0.0.1:9000
           S3_REGION=us-east-1
-          S3_BUCKET=lukma
+          S3_BUCKET=lukma-dev
           S3_ACCESS_KEY=lukma_dev
           S3_SECRET_KEY=change-me
           JWT_ACCESS_SECRET=mobile-dev-cloud-dev-access
@@ -84,7 +92,7 @@ jobs:
           SMTP_SECURE=false
           SMTP_FROM=noreply@lukma.local
           EOF
-          npm run db:migrate || true
+          npm run db:migrate
           nohup npm run start:dev > /tmp/lukma-api.log 2>&1 &
           for i in $(seq 1 60); do curl -fsS http://127.0.0.1:3000/health/ready && exit 0; sleep 2; done
           cat /tmp/lukma-api.log
