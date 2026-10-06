@@ -101,6 +101,8 @@ jobs:
 
           ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
           export ANDROID_SDK_ROOT
+          export ANDROID_AVD_HOME="$HOME/.android/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
           export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator:$PATH"
 
           test -x "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
@@ -109,10 +111,12 @@ jobs:
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platform-tools" "emulator" "platforms;android-35" "system-images;android-35;google_apis;x86_64"
 
-          echo "no" | avdmanager create avd \
+          printf "no\n" | avdmanager create avd \
             --name mobile-dev-cloud \
             --package "system-images;android-35;google_apis;x86_64" \
             --force
+          avdmanager list avd
+          test -f "$ANDROID_AVD_HOME/mobile-dev-cloud.ini"
 
           echo "hw.device.name=pixel_6" >> "$HOME/.android/avd/mobile-dev-cloud.avd/config.ini"
           echo "hw.ramSize=2048" >> "$HOME/.android/avd/mobile-dev-cloud.avd/config.ini"
