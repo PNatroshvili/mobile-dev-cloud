@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getWorkflowJobLogs, getWorkflowJobs, listWorkflowRuns } from "@/lib/github";
+import { getWorkflowJobSteps, getWorkflowJobLogs, getWorkflowJobs, listWorkflowRuns } from "@/lib/github";
 import { readSession } from "@/lib/session";
 
 function tailLogs(logs: string) {
@@ -50,8 +50,22 @@ export async function GET() {
 
     let runtime = { previewUrl: null as string | null, apiUrl: null as string | null, mobileRepo: null as string | null, mobileRef: null as string | null, apiRepo: null as string | null, apiRef: null as string | null, minutes: null as string | null, stage: null as string | null };
     let logs: string[] = [];
+    let currentStep: string | null = null;
+    let error: string | null = null;
     const jobs = await getWorkflowJobs(session.token, String(run.id));
     const workspaceJob = jobs.jobs.find((job) => job.name === "workspace");
+
+    if (workspaceJob) {
+      try {
+        const stepData = await getWorkflowJobSteps(session.token, workspaceJob.id);
+        const activeStep = stepData.steps.find((step) => step.status === "in_progress");
+        const failedStep = stepData.steps.find((step) => step.conclusion === "failure");
+        currentStep = activeStep?.name ?? failedStep?.name ?? null;
+        if (failedStep && run.conclusion !== "success") error = `Runtime failed during: ${failedStep.name}`;
+      } catch {
+        // Step metadata can briefly lag behind the workflow job.
+      }
+    }
 
     if (workspaceJob && (workspaceJob.status === "in_progress" || run.status === "completed")) {
       try {
@@ -68,7 +82,8 @@ export async function GET() {
         ...normalizeRun(run),
         preview_url: runtime.previewUrl,
         api_url: runtime.apiUrl,
-        stage: runtime.stage,
+        stage: currentStep ?? runtime.stage,
+        error,
         config: { mobile_repo: runtime.mobileRepo, mobile_ref: runtime.mobileRef, api_repo: runtime.apiRepo, api_ref: runtime.apiRef, minutes: runtime.minutes },
         logs,
       },
