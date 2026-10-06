@@ -93,6 +93,56 @@ jobs:
           echo
           echo "Android emulator preflight completed. Emulator installation/boot is intentionally not enabled yet."
 
+      - name: Setup Android emulator
+        if: ${{ inputs.android_emulator }}
+        run: |
+          echo "Stage: Setting up Android emulator"
+          set -euo pipefail
+
+          ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          export ANDROID_SDK_ROOT
+          export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator:$PATH"
+
+          test -x "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/avdmanager"
+
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "emulator" "platforms;android-35" "system-images;android-35;google_apis;x86_64"
+
+          echo "no" | avdmanager create avd \
+            --name mobile-dev-cloud \
+            --package "system-images;android-35;google_apis;x86_64" \
+            --force
+
+          echo "hw.device.name=pixel_6" >> "$HOME/.android/avd/mobile-dev-cloud.avd/config.ini"
+          echo "hw.ramSize=2048" >> "$HOME/.android/avd/mobile-dev-cloud.avd/config.ini"
+
+          emulator -list-avds
+          emulator -avd mobile-dev-cloud \
+            -no-window \
+            -no-audio \
+            -no-boot-anim \
+            -no-snapshot \
+            -gpu swiftshader_indirect \
+            -accel on > /tmp/android-emulator.log 2>&1 &
+          echo $! > /tmp/android-emulator.pid
+
+          adb start-server
+          adb wait-for-device
+
+          for i in $(seq 1 90); do
+            booted="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+            [ "$booted" = "1" ] && break
+            sleep 2
+          done
+
+          test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
+          adb shell input keyevent 82 || true
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+
+          echo "Android emulator booted successfully." >> "$GITHUB_STEP_SUMMARY"
       - name: Install pinned Cloudflare Tunnel
         run: |
           set -euo pipefail
