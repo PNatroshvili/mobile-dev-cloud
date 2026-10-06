@@ -14,6 +14,9 @@ export function WorkspaceControls({ connected }: { connected: boolean }) {
   const [starting, setStarting] = useState(false);
   const [message, setMessage] = useState("");
   const [runUrl, setRunUrl] = useState("");
+  const [runId, setRunId] = useState<number | null>(null);
+  const [runStatus, setRunStatus] = useState<string>("");
+  const [runConclusion, setRunConclusion] = useState<string | null>(null);
 
   useEffect(() => {
     if (!connected) return;
@@ -22,6 +25,33 @@ export function WorkspaceControls({ connected }: { connected: boolean }) {
       .then((data: { repos: Repo[] }) => setRepos(data.repos))
       .catch(() => setMessage("GitHub repositories could not be loaded."));
   }, [connected]);
+
+  useEffect(() => {
+    if (!runId) return;
+    let cancelled = false;
+
+    const poll = async () => {
+      try {
+        const response = await fetch(`/api/workspaces/${runId}`, { cache: "no-store" });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (cancelled) return;
+        setRunStatus(data.status ?? "");
+        setRunConclusion(data.conclusion ?? null);
+        if (data.html_url) setRunUrl(data.html_url);
+        if (data.status === "completed") return;
+      } catch {
+        // Keep polling; transient status failures should not interrupt the workspace.
+      }
+    };
+
+    void poll();
+    const timer = window.setInterval(poll, 4000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [runId]);
 
   useEffect(() => {
     if (!connected || !repo) return;
@@ -46,6 +76,9 @@ export function WorkspaceControls({ connected }: { connected: boolean }) {
     setStarting(true);
     setMessage("");
     setRunUrl("");
+    setRunId(null);
+    setRunStatus("queued");
+    setRunConclusion(null);
     try {
       const response = await fetch("/api/workspaces/start", {
         method: "POST",
@@ -62,6 +95,8 @@ export function WorkspaceControls({ connected }: { connected: boolean }) {
       if (!response.ok) throw new Error(data.error || "Unable to start workspace.");
       setMessage(data.status === "in_progress" ? "Workspace is starting." : "Workspace queued.");
       if (data.run?.html_url) setRunUrl(data.run.html_url);
+      if (data.run?.id) setRunId(data.run.id);
+      if (data.run?.status) setRunStatus(data.run.status);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to start workspace.");
     } finally {
@@ -94,6 +129,11 @@ export function WorkspaceControls({ connected }: { connected: boolean }) {
       <button className="primary" onClick={startWorkspace} disabled={starting || !selectedRepo || !branch}>
         {starting ? "Starting workspace…" : "Start workspace"}
       </button>
+      {runStatus && (
+        <p className="hint">
+          Workspace: {runStatus === "completed" ? (runConclusion === "success" ? "ready" : `failed (${runConclusion ?? "unknown"})`) : runStatus}
+        </p>
+      )}
       {message && <p className="hint">{message}</p>}
       {runUrl && <p className="hint"><a href={runUrl} target="_blank" rel="noreferrer">Open GitHub Actions run →</a></p>}
     </>
