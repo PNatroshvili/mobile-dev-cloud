@@ -30,6 +30,7 @@ export function WorkspaceControls({ connected }: { connected: boolean }) {
   useEffect(() => {
     if (!runId) return;
     let cancelled = false;
+    let timer: number | undefined;
 
     const poll = async () => {
       try {
@@ -41,17 +42,20 @@ export function WorkspaceControls({ connected }: { connected: boolean }) {
         setRunConclusion(data.conclusion ?? null);
         if (data.html_url) setRunUrl(data.html_url);
         if (data.preview_url) setPreviewUrl(data.preview_url);
-        if (data.status === "completed") return;
+        if (data.status === "completed" && timer !== undefined) {
+          window.clearInterval(timer);
+          timer = undefined;
+        }
       } catch {
         // Keep polling; transient status failures should not interrupt the workspace.
       }
     };
 
     void poll();
-    const timer = window.setInterval(poll, 4000);
+    timer = window.setInterval(poll, 4000);
     return () => {
       cancelled = true;
-      window.clearInterval(timer);
+      if (timer !== undefined) window.clearInterval(timer);
     };
   }, [runId]);
 
