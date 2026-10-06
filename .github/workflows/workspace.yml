@@ -124,6 +124,7 @@ jobs:
           for i in $(seq 1 60); do API_URL=$(grep -oE 'https://[-a-z0-9]+\.trycloudflare\.com' /tmp/api-tunnel.log | head -1 || true); [ -n "$API_URL" ] && break; sleep 2; done
           test -n "${API_URL:-}" || { cat /tmp/api-tunnel.log; exit 1; }
           echo "API_URL=$API_URL" >> "$GITHUB_ENV"
+          echo "API: $API_URL"
 
       - name: Start Expo web
         working-directory: mobile
