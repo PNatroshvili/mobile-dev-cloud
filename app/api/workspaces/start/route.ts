@@ -33,6 +33,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    const dispatchedAt = Date.now();
     await dispatchWorkflow(session.token, "workspace.yml", "main", {
       mobile_repo: mobileRepo,
       mobile_ref: mobileRef,
@@ -41,9 +42,20 @@ export async function POST(request: Request) {
       session_minutes: minutes,
     });
 
-    const runs = await listWorkflowRuns(session.token, "workspace.yml");
-    const run = runs.workflow_runs[0];
-    return NextResponse.json({ ok: true, repository: PLATFORM_REPO, status: run?.status ?? "queued", run });
+    let run = null;
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const runs = await listWorkflowRuns(session.token, "workspace.yml");
+      run = runs.workflow_runs.find((candidate) => Date.parse(candidate.created_at) >= dispatchedAt - 10_000) ?? null;
+      if (run) break;
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+    }
+
+    return NextResponse.json({
+      ok: true,
+      repository: PLATFORM_REPO,
+      status: run?.status ?? "queued",
+      run,
+    });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unable to start workspace." },
