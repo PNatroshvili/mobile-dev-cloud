@@ -2,14 +2,7 @@ import { NextResponse } from "next/server";
 import { getWorkflowJobSteps, getWorkflowJobLogs, getWorkflowJobs, listWorkflowRuns } from "@/lib/github";
 import { readSession } from "@/lib/session";
 
-function tailLogs(logs: string) {
-  return logs
-    .replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, "")
-    .split("\n")
-    .map((line) => line.trimEnd().replace(/(Android:\s+https:\/\/[^\s?]+\/\?token=)[^\s]+/g, "$1***"))
-    .filter(Boolean)
-    .slice(-14);
-}
+import { extractRuntime, runtimePhase, tailRuntimeLogs } from "@/lib/workspace-runtime";
 
 function normalizeRun(run: {
   id: number;
@@ -87,7 +80,7 @@ export async function GET() {
     if (workspaceJob && (workspaceJob.status === "in_progress" || run.status === "completed")) {
       try {
         const rawLogs = await getWorkflowJobLogs(session.token, workspaceJob.id);
-        logs = tailLogs(rawLogs);
+        logs = tailRuntimeLogs(rawLogs);
         runtime = extractRuntime(rawLogs);
       } catch {
         // Logs may not be available until GitHub finishes indexing the job.
