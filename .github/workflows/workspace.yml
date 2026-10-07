@@ -295,7 +295,18 @@ jobs:
           echo "Stage: Verifying runtime"
           set -euo pipefail
           curl -fsS http://127.0.0.1:3000/v1/health/ready >/dev/null
-          curl -fsSI --max-time 15 "$WEB_URL" >/dev/null
+          for i in $(seq 1 30); do
+            if curl -fsSI --retry 2 --retry-delay 2 --retry-all-errors --max-time 15 "$WEB_URL" >/dev/null 2>&1; then
+              echo "Preview tunnel is reachable."
+              break
+            fi
+            if [ "$i" = "30" ]; then
+              echo "Preview tunnel did not become reachable: $WEB_URL"
+              cat /tmp/web-tunnel.log || true
+              exit 1
+            fi
+            sleep 2
+          done
           echo "Runtime endpoint checks passed." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Keep workspace alive
