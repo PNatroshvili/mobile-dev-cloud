@@ -13,14 +13,16 @@ function tailLogs(logs: string) {
 function extractRuntime(rawLogs: string) {
   const previewUrl = rawLogs.match(/Preview:\s+(https:\/\/[-a-z0-9]+\.trycloudflare\.com)/)?.[1] ?? null;
   const apiUrl = rawLogs.match(/API:\s+(https:\/\/[-a-z0-9]+\.trycloudflare\.com)/)?.[1] ?? null;
+  const androidUrl = rawLogs.match(/Android:\s+(https:\/\/[-a-z0-9]+\.trycloudflare\.com\/\?token=[^\s]+)/)?.[1] ?? null;
   const mobileRepo = rawLogs.match(/Workspace mobile repo:\s+([^\s]+)/)?.[1] ?? null;
   const mobileRef = rawLogs.match(/Workspace mobile ref:\s+([^\r\n]+)/)?.[1]?.trim() ?? null;
   const apiRepo = rawLogs.match(/Workspace API repo:\s+([^\s]+)/)?.[1] ?? null;
   const apiRef = rawLogs.match(/Workspace API ref:\s+([^\r\n]+)/)?.[1]?.trim() ?? null;
   const minutes = rawLogs.match(/Workspace minutes:\s+(\d+)/)?.[1] ?? null;
   const stages = [...rawLogs.matchAll(/Stage:\s+([^\r\n]+)/g)].map((match) => match[1].trim());
-  const android = rawLogs.includes("Stage: Android emulator ready");
-  return { previewUrl, apiUrl, mobileRepo, mobileRef, apiRepo, apiRef, minutes, stage: stages.at(-1) ?? null, android };
+  const android = rawLogs.includes("Stage: Android browser stream ready");
+
+  return { previewUrl, apiUrl, androidUrl, mobileRepo, mobileRef, apiRepo, apiRef, minutes, stage: stages.at(-1) ?? null, android };
 }
 
 
@@ -54,7 +56,7 @@ export async function GET(
       return NextResponse.json({ error: "Workspace run does not belong to the connected GitHub account." }, { status: 403 });
     }
 
-    let runtime = { previewUrl: null as string | null, apiUrl: null as string | null, mobileRepo: null as string | null, mobileRef: null as string | null, apiRepo: null as string | null, apiRef: null as string | null, minutes: null as string | null, stage: null as string | null, android: false };
+    let runtime = { previewUrl: null as string | null, apiUrl: null as string | null, androidUrl: null as string | null, mobileRepo: null as string | null, mobileRef: null as string | null, apiRepo: null as string | null, apiRef: null as string | null, minutes: null as string | null, stage: null as string | null, android: false };
     let logs: string[] = [];
     let currentStep: string | null = null;
     let error: string | null = null;
@@ -96,6 +98,7 @@ export async function GET(
       error,
       config: { mobile_repo: runtime.mobileRepo, mobile_ref: runtime.mobileRef, api_repo: runtime.apiRepo, api_ref: runtime.apiRef, minutes: runtime.minutes },
       runtime: { backend: Boolean(runtime.apiUrl), api_tunnel: Boolean(runtime.apiUrl), expo: Boolean(runtime.previewUrl), preview: Boolean(runtime.previewUrl), android: runtime.android },
+      android_url: runtime.androidUrl,
       logs,
     });
   } catch (error) {
