@@ -39,7 +39,7 @@ Use:
 - `mobile_ref`: `feature/home-discovery-foundation`
 - `api_repo`: `PNatroshvili/lukma-api`
 - `api_ref`: `feat/auth-api`
-- `session_minutes`: `30`
+- `session_minutes`: `15`
 
 A successful run starts the API, creates a temporary API tunnel, starts Expo Web, creates a temporary preview tunnel, aligns API CORS to that preview origin, and keeps the workspace alive for the requested session.
 
@@ -54,3 +54,18 @@ Never commit .env files, GitHub tokens, OAuth client secrets, emulator credentia
 The control plane reads machine-readable runtime markers from the GitHub Actions job logs. These markers expose the selected mobile/API repositories and refs, requested lifetime, current runtime stage, API tunnel URL, and Expo preview URL without storing repository credentials in the browser.
 
 When the browser session is refreshed, the latest workspace is recovered from GitHub Actions and the selected mobile repository/ref are restored when the runtime emitted that configuration. API and workspace URLs remain short-lived runtime values.
+
+
+## Workspace runtime contract
+
+The runtime/control-plane contract is documented in [WORKSPACE_RUNTIME_CONTRACT.md](./WORKSPACE_RUNTIME_CONTRACT.md).
+
+The control plane recovers the latest workspace from GitHub Actions and can:
+- show the current runtime phase and logs;
+- stop an active workspace;
+- restart an active, failed, or completed workspace using the original repository/ref/runtime configuration;
+- open the short-lived Android, Expo Web, and API endpoints when they are available.
+
+Restart is intentionally configuration-preserving. It does not silently switch repository, branch, API ref, Android mode, or lifetime.
+
+The dashboard uses a 15-minute default workspace lifetime. Supported values remain 5–60 minutes.
