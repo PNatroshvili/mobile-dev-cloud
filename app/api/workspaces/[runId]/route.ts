@@ -2,43 +2,7 @@ import { NextResponse } from "next/server";
 import { getWorkflowJobSteps, getWorkflowJobs, getWorkflowJobLogs, getWorkflowRun } from "@/lib/github";
 import { readSession } from "@/lib/session";
 
-function tailLogs(logs: string) {
-  return logs
-    .replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, "")
-    .split("\n")
-    .map((line) => line.trimEnd().replace(/(Android:\s+https:\/\/[^\s?]+\/\?token=)[^\s]+/g, "$1***"))
-    .filter(Boolean)
-    .slice(-14);
-}
-function extractRuntime(rawLogs: string) {
-  const previewUrl = rawLogs.match(/Preview:\s+(https:\/\/[-a-z0-9]+\.trycloudflare\.com)/)?.[1] ?? null;
-  const apiUrl = rawLogs.match(/API:\s+(https:\/\/[-a-z0-9]+\.trycloudflare\.com)/)?.[1] ?? null;
-  const androidUrl = rawLogs.match(/Android:\s+(https:\/\/[-a-z0-9]+\.trycloudflare\.com\/\?token=[^\s]+)/)?.[1] ?? null;
-  const mobileRepo = rawLogs.match(/Workspace mobile repo:\s+([^\s]+)/)?.[1] ?? null;
-  const mobileRef = rawLogs.match(/Workspace mobile ref:\s+([^\r\n]+)/)?.[1]?.trim() ?? null;
-  const apiRepo = rawLogs.match(/Workspace API repo:\s+([^\s]+)/)?.[1] ?? null;
-  const apiRef = rawLogs.match(/Workspace API ref:\s+([^\r\n]+)/)?.[1]?.trim() ?? null;
-  const minutes = rawLogs.match(/Workspace minutes:\s+(\d+)/)?.[1] ?? null;
-  const stages = [...rawLogs.matchAll(/Stage:\s+([^\r\n]+)/g)].map((match) => match[1].trim());
-  const android = rawLogs.includes("Stage: Android browser stream ready");
-
-  return { previewUrl, apiUrl, androidUrl, mobileRepo, mobileRef, apiRepo, apiRef, minutes, stage: stages.at(-1) ?? null, android };
-}
-
-
-function runtimePhase(status: string, conclusion: string | null, step: string | null, stage: string | null) {
-  if (status === "queued") return "queued";
-  if (status === "completed") return conclusion === "success" ? "ready" : conclusion === "cancelled" ? "cancelled" : "failed";
-  const value = `${step ?? ""} ${stage ?? ""}`.toLowerCase();
-  if (value.includes("backend")) return "backend";
-  if (value.includes("api tunnel")) return "api_tunnel";
-  if (value.includes("expo")) return "expo";
-  if (value.includes("preview")) return "preview";
-  if (value.includes("cors") || value.includes("verif")) return "verifying";
-  if (value.includes("workspace ready")) return "ready";
-  if (value.includes("stop")) return "stopping";
-  return "starting";
-}
+import { extractRuntime, runtimePhase, tailRuntimeLogs } from "@/lib/workspace-runtime";
 
 export async function GET(
   _request: Request,
@@ -78,7 +42,7 @@ export async function GET(
     if (workspaceJob && (workspaceJob.status === "in_progress" || run.status === "completed")) {
       try {
         const rawLogs = await getWorkflowJobLogs(session.token, workspaceJob.id);
-        logs = tailLogs(rawLogs);
+        logs = tailRuntimeLogs(rawLogs);
         runtime = extractRuntime(rawLogs);
       } catch {
         // Logs may not be available until GitHub finishes indexing the job.
