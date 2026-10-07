@@ -39,7 +39,7 @@ jobs:
           if command -v emulator >/dev/null 2>&1; then
             timeout 6m sdkmanager "platform-tools" "system-images;android-35;google_apis;x86_64"
           else
-            timeout 8m sdkmanager "platform-tools" "emulator" "system-images;android-35;google_apis;x86_64"
+            timeout 8m sdkmanager "system-images;android-35;google_apis;x86_64"
           fi
           printf 'no\n' | timeout 60s avdmanager create avd --name mobile-dev-cloud-e2e --package "system-images;android-35;google_apis;x86_64" --force
           avdmanager list avd
@@ -72,7 +72,7 @@ jobs:
           TOKEN="$(openssl rand -hex 32)"
           SERIAL="$(adb devices | awk '$2 == "device" && $1 ~ /^emulator-/ { print $1; exit }')"
           test -n "$SERIAL"
-          nohup bunx --yes serve-emu@0.0.6 --host 0.0.0.0 --port 3300 --token "$TOKEN" --serial "$SERIAL" --max-fps 30 --max-size 1280 > /tmp/serve-emu.log 2>&1 &
+          nohup bunx --yes serve-emu@latest --host 0.0.0.0 --port 3300 --token "$TOKEN" --serial "$SERIAL" --max-fps 30 --max-size 1280 > /tmp/serve-emu.log 2>&1 &
           echo $! > /tmp/serve-emu.pid
           for i in $(seq 1 90); do
             if curl -fsS -H "Authorization: Bearer $TOKEN" http://127.0.0.1:3300/health >/tmp/serve-emu-health.json 2>/dev/null; then break; fi
