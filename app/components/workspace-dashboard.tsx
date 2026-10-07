@@ -31,7 +31,7 @@ const services = [
 
 function statusLabel(status: string, conclusion: string | null) {
   if (status === "completed") {
-    if (conclusion === "success") return "Ready";
+    if (conclusion === "success") return "Expired";
     if (conclusion === "cancelled") return "Cancelled";
     return "Failed";
   }
@@ -42,6 +42,7 @@ function statusLabel(status: string, conclusion: string | null) {
 
 function statusTone(status: string, conclusion: string | null) {
   if (status === "completed" && conclusion === "cancelled") return "planned";
+  if (status === "completed" && conclusion === "success") return "planned";
   if (status === "completed" && conclusion !== "success") return "error";
   if (status === "completed" || status === "in_progress") return "ready";
   return "planned";
@@ -93,6 +94,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
       .then((response) => response.ok ? response.json() : Promise.reject())
       .then((data: { branches: Branch[] }) => {
         setBranches(data.branches);
+        setMessage((current) => current === "Branches could not be loaded." ? "" : current);
         if (!data.branches.some((item) => item.name === branch)) setBranch(data.branches[0]?.name ?? "");
       })
       .catch(() => setMessage("Branches could not be loaded."))
@@ -137,6 +139,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
   const androidUrl = run?.android_url ?? "";
   const stage = run?.stage ?? label;
   const phase = run?.phase ?? "starting";
+  const sessionExpired = run?.status === "completed" && run?.conclusion === "success";
   const runtimeError = run?.error ?? "";
   const runtime = run?.runtime;
 
@@ -342,31 +345,31 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
           )}
         </div>
 
-        <div className={"card preview-card " + ((androidUrl || preview) ? "preview-ready" : "")}>
+        <div className={"card preview-card " + ((active && (androidUrl || preview)) ? "preview-ready" : "")}>
           <div className="card-head">
             <div><span className="label">{androidUrl ? "ANDROID LIVE" : "LIVE PREVIEW"}</span><h2>{androidUrl ? "Android emulator" : "Browser device"}</h2></div>
-            <span className={"pill " + ((androidUrl || preview) ? "" : "muted")}>{androidUrl ? "Live" : preview ? "Live" : label}</span>
+            <span className={"pill " + ((androidUrl || preview) ? "" : "muted")}>{active && androidUrl ? "Live" : active && preview ? "Live" : label}</span>
           </div>
           <div className="device-wrap">
-            {androidUrl ? (
+            {active && androidUrl ? (
               <iframe className="preview-frame" src={androidUrl} title="LUKMA Android emulator" allow="clipboard-read; clipboard-write" />
-            ) : preview ? (
+            ) : active && preview ? (
               <iframe className="preview-frame" src={preview} title="LUKMA live preview" allow="clipboard-read; clipboard-write" />
             ) : (
               <div className="phone">
                 <div className="notch" />
                 <div className="phone-screen">
                   <span className="preview-logo">LUKMA</span>
-                  <span className="preview-copy">{active ? "Booting your workspace…" : "Your mobile preview will appear here."}</span>
+                  <span className="preview-copy">{active ? "Booting your workspace…" : sessionExpired ? "Workspace session expired." : "Your mobile preview will appear here."}</span>
                   {active && <span className="preview-loader" />}
                 </div>
               </div>
             )}
           </div>
           <div className="preview-links">
-            {androidUrl && <a className="preview-link" href={androidUrl} target="_blank" rel="noreferrer">Open Android emulator ↗</a>}
-            {!androidUrl && preview && <a className="preview-link" href={preview} target="_blank" rel="noreferrer">Open preview in a new tab ↗</a>}
-            {apiUrl && <a className="preview-link" href={apiUrl} target="_blank" rel="noreferrer">Open API ↗</a>}
+            {active && androidUrl && <a className="preview-link" href={androidUrl} target="_blank" rel="noreferrer">Open Android emulator ↗</a>}
+            {active && !androidUrl && preview && <a className="preview-link" href={preview} target="_blank" rel="noreferrer">Open preview in a new tab ↗</a>}
+            {active && apiUrl && <a className="preview-link" href={apiUrl} target="_blank" rel="noreferrer">Open API ↗</a>}
           </div>
         </div>
       </section>
@@ -384,8 +387,8 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
           <div className="card-head"><div><span className="label">SERVICES</span><h2>Runtime stack</h2></div></div>
           <div className="service-list">
             {services.map((service, index) => {
-              const serviceStatus = !run ? (index === 0 ? "Ready" : "Planned") : index === 0 ? "Ready" : index === 1 ? (run.status === "completed" && run.conclusion === "cancelled" ? "Stopped" : run.status === "completed" && run.conclusion !== "success" ? "Error" : runtime?.backend ? "Live" : active ? "Booting" : "Ready") : index === 2 ? (runtime?.preview ? "Live" : active ? "Booting" : "Ready") : runtime?.android ? "Live" : "Planned";
-              const serviceClass = serviceStatus === "Error" ? "status error" : serviceStatus === "Planned" || serviceStatus === "Stopped" ? "status planned" : "status ready";
+              const serviceStatus = !run ? (index === 0 ? "Ready" : "Planned") : index === 0 ? "Ready" : index === 1 ? (run.status === "completed" && run.conclusion === "cancelled" ? "Stopped" : run.status === "completed" && run.conclusion === "success" ? "Expired" : run.status === "completed" ? "Error" : runtime?.backend ? "Live" : active ? "Booting" : "Ready") : index === 2 ? (run.status === "completed" && run.conclusion === "success" ? "Expired" : runtime?.preview ? "Live" : active ? "Booting" : "Ready") : run.status === "completed" && run.conclusion === "success" ? "Expired" : runtime?.android ? "Live" : "Planned";
+              const serviceClass = serviceStatus === "Error" ? "status error" : serviceStatus === "Planned" || serviceStatus === "Stopped" || serviceStatus === "Expired" ? "status planned" : "status ready";
               return <div className="service" key={service.name}><div><strong>{service.name}</strong><span>{service.detail}</span></div><span className={serviceClass}>{serviceStatus}</span></div>;
             })}
           </div>
