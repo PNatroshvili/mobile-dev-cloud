@@ -18,7 +18,9 @@ jobs:
         run: |
           set -euo pipefail
           test -e /dev/kvm
+          sudo chmod 666 /dev/kvm
           ls -l /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
           grep -Eo 'vmx|svm' /proc/cpuinfo | sort -u
 
       - name: Install image and boot Android emulator
@@ -28,6 +30,8 @@ jobs:
           export ANDROID_AVD_HOME="$HOME/.android/avd"
           mkdir -p "$ANDROID_AVD_HOME"
           export PATH="$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
+          sudo chmod 666 /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
           yes | sdkmanager --licenses >/dev/null || true
           timeout 8m sdkmanager "platform-tools" "emulator" "system-images;android-35;google_apis;x86_64"
           printf 'no\n' | timeout 60s avdmanager create avd --name mobile-dev-cloud-e2e --package "system-images;android-35;google_apis;x86_64" --force
