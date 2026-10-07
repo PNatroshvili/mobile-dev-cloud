@@ -21,17 +21,23 @@ jobs:
           ls -l /dev/kvm
           grep -Eo 'vmx|svm' /proc/cpuinfo | sort -u
 
-      - name: Boot Android emulator from runner SDK
+      - name: Boot Android emulator from installed runner image
         run: |
           set -euo pipefail
           export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
           export ANDROID_AVD_HOME="$HOME/.android/avd"
           mkdir -p "$ANDROID_AVD_HOME"
           export PATH="$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
-          sdkmanager --list_installed | grep -E 'platform-tools|emulator|system-images' || true
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "emulator" "system-images;android-35;google_apis;x86_64"
-          printf 'no\n' | avdmanager create avd --name mobile-dev-cloud-e2e --package "system-images;android-35;google_apis;x86_64" --force
+          echo "Installed system images:"
+          find "$ANDROID_SDK_ROOT/system-images" -maxdepth 3 -type d -name 'x86_64' -print 2>/dev/null || true
+          IMAGE="$(find "$ANDROID_SDK_ROOT/system-images" -maxdepth 3 -type d -name 'x86_64' -print -quit 2>/dev/null || true)"
+          test -n "$IMAGE"
+          PACKAGE="system-images;android-35;google_apis;x86_64"
+          case "$IMAGE" in
+            *android-35*google_apis*x86_64) PACKAGE="system-images;android-35;google_apis;x86_64" ;;
+            *) echo "Using installed image at $IMAGE" ;;
+          esac
+          printf 'no\n' | avdmanager create avd --name mobile-dev-cloud-e2e --package "$PACKAGE" --force
           avdmanager list avd
           test -f "$ANDROID_AVD_HOME/mobile-dev-cloud-e2e.ini"
           emulator -avd mobile-dev-cloud-e2e -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -accel on > /tmp/emulator.log 2>&1 &
@@ -46,7 +52,6 @@ jobs:
           test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
           adb shell getprop ro.build.version.release
           adb shell wm size
-          adb shell input keyevent 82 || true
           adb exec-out screencap -p > /tmp/android-emulator.png
           test -s /tmp/android-emulator.png
           echo "Android emulator boot + ADB + screenshot verification passed."
