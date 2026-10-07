@@ -54,7 +54,8 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
   const [branch, setBranch] = useState("feature/home-discovery-foundation");
   const [loading, setLoading] = useState(false);
   const [starting, setStarting] = useState(false);
-  const [stopping, setStopping] = useState(false);\n  const [restarting, setRestarting] = useState(false);
+  const [stopping, setStopping] = useState(false);
+  const [restarting, setRestarting] = useState(false);
   const [androidEmulator, setAndroidEmulator] = useState(false);
   const [message, setMessage] = useState("");
   const [run, setRun] = useState<WorkspaceData | null>(null);
