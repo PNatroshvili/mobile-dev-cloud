@@ -134,6 +134,28 @@ jobs:
           adb shell input keyevent 82 || true
           echo "Stage: Android emulator ready"
 
+      - name: Setup browser emulator stream
+        if: ${{ inputs.android_emulator }}
+        run: |
+          echo "Stage: Starting Android browser stream"
+          set -euo pipefail
+          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          export PATH="$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
+          test "$(adb devices | awk '$2 == "device" && $1 ~ /^emulator-/ { print $1; exit }')"
+          bun --version
+          ANDROID_SERIAL="$(adb devices | awk '$2 == "device" && $1 ~ /^emulator-/ { print $1; exit }')"
+          STREAM_TOKEN="$(openssl rand -hex 32)"
+          nohup bunx --yes serve-emu@latest --host 0.0.0.0 --port 3300 --token "$STREAM_TOKEN" --serial "$ANDROID_SERIAL" --max-fps 30 --max-size 1280 > /tmp/serve-emu.log 2>&1 &
+          echo $! > /tmp/serve-emu.pid
+          for i in $(seq 1 90); do
+            if curl -fsS -H "Authorization: Bearer $STREAM_TOKEN" http://127.0.0.1:3300/health >/tmp/serve-emu-health.json 2>/dev/null; then break; fi
+            sleep 2
+          done
+          test -s /tmp/serve-emu-health.json
+          curl -fsS -H "Authorization: Bearer $STREAM_TOKEN" http://127.0.0.1:3300/api/devices >/tmp/serve-emu-devices.json
+          curl -fsS -H "Authorization: Bearer $STREAM_TOKEN" http://127.0.0.1:3300/api/screenshot --output /tmp/serve-emu-screenshot.png
+          test -s /tmp/serve-emu-screenshot.png
+          echo "Stage: Android browser stream ready"
       - name: Install pinned Cloudflare Tunnel
         run: |
           set -euo pipefail
