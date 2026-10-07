@@ -250,12 +250,45 @@ jobs:
           echo "Android: $ANDROID_BROWSER_URL"
           echo "## Android Emulator" >> "$GITHUB_STEP_SUMMARY"
           echo "Stream: $ANDROID_BROWSER_URL" >> "$GITHUB_STEP_SUMMARY"
+      - name: Build and install Android app
+        if: ${{ inputs.android_emulator }}
+        working-directory: mobile
+        run: |
+          echo "Stage: Building and installing LUKMA Android app"
+          set -euo pipefail
+          npm ci
+          npx expo run:android --no-bundler
+          adb shell pm path ge.skup.lukma
+          echo "Stage: LUKMA Android app installed"
+
+      - name: Start native Metro
+        if: ${{ inputs.android_emulator }}
+        working-directory: mobile
+        env:
+          EXPO_PUBLIC_API_URL: ${{ env.API_URL }}
+        run: |
+          echo "Stage: Starting native Metro"
+          set -euo pipefail
+          adb reverse tcp:8081 tcp:8081
+          nohup npx expo start --dev-client --port 8081 --non-interactive > /tmp/expo-native.log 2>&1 &
+          echo $! > /tmp/expo-native.pid
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:8081/status >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8081/status >/dev/null
+          adb shell monkey -p ge.skup.lukma 1 >/dev/null
+          sleep 5
+          echo "Stage: LUKMA Android app running"
+
       - name: Start Expo web
+        if: ${{ !inputs.android_emulator }}
         working-directory: mobile
         env:
           EXPO_PUBLIC_API_URL: ${{ env.API_URL }}
         run: |
           echo "Stage: Starting Expo Web"
+          set -euo pipefail
           if [ ! -f package.json ]; then echo 'Mobile repository is not accessible or is invalid.'; exit 1; fi
           npm ci
           nohup npx expo start --web --port 8081 --non-interactive > /tmp/expo.log 2>&1 &
@@ -264,11 +297,27 @@ jobs:
           cat /tmp/expo.log
           exit 1
 
+      - name: Start Expo web alongside Android
+        if: ${{ inputs.android_emulator }}
+        working-directory: mobile
+        env:
+          EXPO_PUBLIC_API_URL: ${{ env.API_URL }}
+        run: |
+          echo "Stage: Starting Expo Web"
+          set -euo pipefail
+          nohup npx expo start --web --port 8083 --non-interactive > /tmp/expo-web.log 2>&1 &
+          echo $! > /tmp/expo-web.pid
+          for i in $(seq 1 90); do curl -fsS http://127.0.0.1:8083 >/dev/null 2>&1 && break; sleep 2; done
+          curl -fsS http://127.0.0.1:8083 >/dev/null
+          echo "Stage: Expo Web ready"
+
       - name: Start preview tunnel
         id: preview
         run: |
           echo "Stage: Creating preview tunnel"
-          nohup /tmp/cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8081 > /tmp/web-tunnel.log 2>&1 &
+          WEB_PORT=8081
+          if [ "${{ inputs.android_emulator }}" = "true" ]; then WEB_PORT=8083; fi
+          nohup /tmp/cloudflared tunnel --no-autoupdate --url "http://127.0.0.1:${WEB_PORT}" > /tmp/web-tunnel.log 2>&1 &
           echo $! > /tmp/web-tunnel.pid
           for i in $(seq 1 60); do WEB_URL=$(grep -oE 'https://[-a-z0-9]+\.trycloudflare\.com' /tmp/web-tunnel.log | head -1 || true); [ -n "$WEB_URL" ] && break; sleep 2; done
           test -n "${WEB_URL:-}" || { cat /tmp/web-tunnel.log; exit 1; }
@@ -322,7 +371,7 @@ jobs:
         if: always()
         run: |
           echo "### Runtime diagnostics" >> "$GITHUB_STEP_SUMMARY"
-          for file in /tmp/lukma-api.log /tmp/api-tunnel.log /tmp/expo.log /tmp/web-tunnel.log /tmp/android-emulator.log /tmp/serve-emu.log /tmp/android-tunnel.log; do
+          for file in /tmp/lukma-api.log /tmp/api-tunnel.log /tmp/expo.log /tmp/expo-native.log /tmp/expo-web.log /tmp/web-tunnel.log /tmp/android-emulator.log /tmp/serve-emu.log /tmp/android-tunnel.log; do
             if [ -f "$file" ]; then
               echo "<details><summary>$(basename "$file")</summary>" >> "$GITHUB_STEP_SUMMARY"
               echo '````text`' >> "$GITHUB_STEP_SUMMARY"
@@ -339,6 +388,8 @@ jobs:
           if [ -f /tmp/web-tunnel.pid ]; then kill "$(cat /tmp/web-tunnel.pid)" || true; fi
           if [ -f /tmp/api-tunnel.pid ]; then kill "$(cat /tmp/api-tunnel.pid)" || true; fi
           if [ -f /tmp/expo.pid ]; then kill "$(cat /tmp/expo.pid)" || true; fi
+          if [ -f /tmp/expo-native.pid ]; then kill "$(cat /tmp/expo-native.pid)" || true; fi
+          if [ -f /tmp/expo-web.pid ]; then kill "$(cat /tmp/expo-web.pid)" || true; fi
           if [ -f /tmp/android-emulator.pid ]; then kill "$(cat /tmp/android-emulator.pid)" || true; fi
           if [ -f /tmp/lukma-api.pid ]; then kill "$(cat /tmp/lukma-api.pid)" || true; fi
           if [ -f api/docker-compose.yml ]; then
