@@ -105,7 +105,11 @@ jobs:
           sudo chmod 666 /dev/kvm
           test -r /dev/kvm && test -w /dev/kvm
           yes | sdkmanager --licenses >/dev/null || true
-          timeout 8m sdkmanager "platform-tools" "emulator" "system-images;android-35;google_apis;x86_64"
+          if command -v emulator >/dev/null 2>&1; then
+            timeout 6m sdkmanager "platform-tools" "system-images;android-35;google_apis;x86_64"
+          else
+            timeout 8m sdkmanager "platform-tools" "emulator" "system-images;android-35;google_apis;x86_64"
+          fi
           printf 'no\n' | timeout 60s avdmanager create avd --name mobile-dev-cloud --package "system-images;android-35;google_apis;x86_64" --force
           avdmanager list avd
           test -f "$ANDROID_AVD_HOME/mobile-dev-cloud.ini"
