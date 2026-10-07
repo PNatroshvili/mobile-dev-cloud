@@ -21,35 +21,33 @@ jobs:
           ls -l /dev/kvm
           grep -Eo 'vmx|svm' /proc/cpuinfo | sort -u
 
-      - name: Boot Android emulator from installed runner image
+      - name: Install image and boot Android emulator
         run: |
           set -euo pipefail
           export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
           export ANDROID_AVD_HOME="$HOME/.android/avd"
           mkdir -p "$ANDROID_AVD_HOME"
           export PATH="$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
-          echo "Installed system images:"
-          find "$ANDROID_SDK_ROOT/system-images" -maxdepth 3 -type d -name 'x86_64' -print 2>/dev/null || true
-          IMAGE="$(find "$ANDROID_SDK_ROOT/system-images" -maxdepth 3 -type d -name 'x86_64' -print -quit 2>/dev/null || true)"
-          test -n "$IMAGE"
-          PACKAGE="system-images;android-35;google_apis;x86_64"
-          case "$IMAGE" in
-            *android-35*google_apis*x86_64) PACKAGE="system-images;android-35;google_apis;x86_64" ;;
-            *) echo "Using installed image at $IMAGE" ;;
-          esac
-          printf 'no\n' | avdmanager create avd --name mobile-dev-cloud-e2e --package "$PACKAGE" --force
+          yes | sdkmanager --licenses >/dev/null || true
+          timeout 8m sdkmanager "platform-tools" "emulator" "system-images;android-35;google_apis;x86_64"
+          printf 'no\n' | timeout 60s avdmanager create avd --name mobile-dev-cloud-e2e --package "system-images;android-35;google_apis;x86_64" --force
           avdmanager list avd
           test -f "$ANDROID_AVD_HOME/mobile-dev-cloud-e2e.ini"
-          emulator -avd mobile-dev-cloud-e2e -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -accel on > /tmp/emulator.log 2>&1 &
-          echo $! > /tmp/emulator.pid
+          timeout 30s emulator -avd mobile-dev-cloud-e2e -no-window -no-audio -no-boot-anim -no-snapshot -wipe-data -gpu swiftshader_indirect -accel on > /tmp/emulator.log 2>&1 &
+          echo $! > /tmp/android-emulator.pid
           adb start-server
-          adb wait-for-device
+          timeout 30s adb wait-for-device
           for i in $(seq 1 120); do
-            booted="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)
-            [ "$booted" = "1" ] && break
+            booted="$(timeout 10s adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)
+            if [ "$booted" = "1" ]; then break; fi
+            if [ "$((i % 10))" = "0" ]; then tail -n 20 /tmp/emulator.log || true; fi
             sleep 2
           done
-          test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
+          if [ "$(timeout 10s adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)" != "1" ]; then
+            echo "Android emulator did not finish booting."
+            tail -n 120 /tmp/emulator.log || true
+            exit 1
+          fi
           adb shell getprop ro.build.version.release
           adb shell wm size
           adb exec-out screencap -p > /tmp/android-emulator.png
