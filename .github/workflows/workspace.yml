@@ -22,10 +22,10 @@ on:
       session_minutes:
         description: Workspace lifetime (5-60 minutes)
         required: false
-        default: '30'
+        default: '15'
         type: string
       android_emulator:
-        description: Run Android emulator capability preflight
+        description: Boot Android emulator and expose an authenticated browser stream
         required: false
         default: false
         type: boolean
