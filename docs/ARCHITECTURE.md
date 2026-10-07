@@ -37,7 +37,7 @@ A Linux runtime will run Android Emulator with hardware acceleration where avail
 
 The workflow exposes an opt-in `android_emulator` flag. When enabled, it installs the Android 35 emulator image, creates an AVD, boots it headlessly, waits for Android boot completion, and records emulator diagnostics. The default remains disabled so ordinary Web Preview sessions keep their current cost and startup path.
 
-Browser display/input streaming is the next Android milestone. Until that transport is attached and verified end-to-end, the workspace API and dashboard keep Android explicitly unavailable rather than reporting a false `Live` state.
+Browser display/input streaming is implemented with `serve-emu`: the runner starts an authenticated H.264/WebSocket device server backed by scrcpy, exposes it through a Cloudflare Quick Tunnel, and the dashboard embeds the tokenized browser UI. The runtime contract reports Android `Live` only after the stream server health/device/screenshot checks and the `Android browser stream ready` marker are present. The Android option remains opt-in because it adds emulator startup and image-install cost to a workspace.
 
 ## Security
 - GitHub tokens never enter browser JavaScript.
