@@ -55,7 +55,8 @@ export function extractRuntime(rawLogs: string): WorkspaceRuntime {
   runtime.mobileRef = matchValue(rawLogs, /Workspace mobile ref:\s+([^\r\n]+)/);
   runtime.apiRepo = matchValue(rawLogs, /Workspace API repo:\s+([^\s]+)/);
   runtime.apiRef = matchValue(rawLogs, /Workspace API ref:\s+([^\r\n]+)/);
-  runtime.minutes = matchValue(rawLogs, /Workspace minutes:\s+(\d+)/);\n  runtime.androidEmulator = /Workspace Android emulator:\s+true/i.test(rawLogs);
+  runtime.minutes = matchValue(rawLogs, /Workspace minutes:\s+(\d+)/);
+  runtime.androidEmulator = /Workspace Android emulator:\s+true/i.test(rawLogs);
   const stages = [...rawLogs.matchAll(/Stage:\s+([^\r\n]+)/g)].map((match) => match[1].trim());
   runtime.stage = stages.at(-1) ?? null;
   runtime.android = rawLogs.includes("Stage: Android browser stream ready");
