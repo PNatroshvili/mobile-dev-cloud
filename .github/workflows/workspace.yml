@@ -200,7 +200,7 @@ jobs:
           echo "Workspace mobile ref: ${{ inputs.mobile_ref }}"
           echo "Workspace API repo: ${{ inputs.api_repo }}"
           echo "Workspace API ref: ${{ inputs.api_ref }}"
-          echo "Workspace minutes: ${{ inputs.session_minutes }}"
+          echo "Workspace minutes: ${{ inputs.session_minutes }}"\n          echo "Workspace Android emulator: ${{ inputs.android_emulator }}"
           if [ ! -f package.json ]; then echo 'Backend repository is not accessible or is invalid.'; exit 1; fi
           docker compose up -d postgres redis minio mailpit
           npm ci
