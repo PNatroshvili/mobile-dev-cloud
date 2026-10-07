@@ -17,9 +17,9 @@ type WorkspaceData = {
   stage: string | null;
   phase: string;
   error: string | null;
-  config: { mobile_repo: string | null; mobile_ref: string | null; api_repo: string | null; api_ref: string | null; minutes: string | null };
+  config: { mobile_repo: string | null; mobile_ref: string | null; api_repo: string | null; api_ref: string | null; minutes: string | null; android_emulator: boolean };
   logs: string[];
-  runtime: { backend: boolean; api_tunnel: boolean; expo: boolean; preview: boolean; android: boolean };
+  runtime: { backend: boolean; api_tunnel: boolean; expo: boolean; preview: boolean; android: boolean; android_emulator: boolean };
 };
 
 const services = [
@@ -77,6 +77,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
           setRun(data.run);
           if (data.run.config.mobile_repo) setRepo(data.run.config.mobile_repo);
           if (data.run.config.mobile_ref) setBranch(data.run.config.mobile_ref);
+          setAndroidEmulator(data.run.config.android_emulator);
           setMessage("Recovered your latest workspace session.");
         }
       })
@@ -173,9 +174,9 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
           stage: "Starting backend",
           phase: "backend",
           error: null,
-          config: { mobile_repo: repo, mobile_ref: branch, api_repo: "PNatroshvili/lukma-api", api_ref: "feat/auth-api", minutes: "15" },
+          config: { mobile_repo: repo, mobile_ref: branch, api_repo: "PNatroshvili/lukma-api", api_ref: "feat/auth-api", minutes: "15", android_emulator: androidEmulator },
           logs: [],
-          runtime: { backend: false, api_tunnel: false, expo: false, preview: false, android: false },
+          runtime: { backend: false, api_tunnel: false, expo: false, preview: false, android: false, android_emulator: androidEmulator },
         });
       }
     } catch (error) {
@@ -227,6 +228,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
             api_repo: data.run?.config?.api_repo ?? run.config.api_repo,
             api_ref: data.run?.config?.api_ref ?? run.config.api_ref,
             minutes: data.run?.config?.minutes ?? run.config.minutes,
+            android_emulator: data.run?.config?.android_emulator ?? run.config.android_emulator,
           },
           logs: [],
           runtime: { backend: false, api_tunnel: false, expo: false, preview: false, android: false },
