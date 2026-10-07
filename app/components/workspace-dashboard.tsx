@@ -152,7 +152,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
           mobileRef: branch,
           apiRepo: "PNatroshvili/lukma-api",
           apiRef: "feat/auth-api",
-          minutes: "30",
+          minutes: "15",
           androidEmulator,
         }),
       });
@@ -172,7 +172,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
           stage: "Starting backend",
           phase: "backend",
           error: null,
-          config: { mobile_repo: repo, mobile_ref: branch, api_repo: "PNatroshvili/lukma-api", api_ref: "feat/auth-api", minutes: "30" },
+          config: { mobile_repo: repo, mobile_ref: branch, api_repo: "PNatroshvili/lukma-api", api_ref: "feat/auth-api", minutes: "15" },
           logs: [],
           runtime: { backend: false, api_tunnel: false, expo: false, preview: false, android: false },
         });
