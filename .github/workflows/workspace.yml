@@ -415,6 +415,7 @@ jobs:
         run: |
           echo "Stage: Aligning API CORS"
           sed -i "s|^CORS_ORIGINS=.*|CORS_ORIGINS=$WEB_URL|" .env
+          if [ -f /tmp/mobile-dev-cloud-sync.pid ]; then kill "$(cat /tmp/mobile-dev-cloud-sync.pid)" || true; fi
           if [ -f /tmp/lukma-api.pid ]; then kill "$(cat /tmp/lukma-api.pid)" || true; fi
           nohup npm run start:dev > /tmp/lukma-api.log 2>&1 &
           echo $! > /tmp/lukma-api.pid
@@ -454,7 +455,7 @@ jobs:
         if: always()
         run: |
           echo "### Runtime diagnostics" >> "$GITHUB_STEP_SUMMARY"
-          for file in /tmp/lukma-api.log /tmp/api-tunnel.log /tmp/expo.log /tmp/expo-native.log /tmp/expo-web.log /tmp/web-tunnel.log /tmp/android-emulator.log /tmp/serve-emu.log /tmp/android-tunnel.log; do
+          for file in /tmp/lukma-api.log /tmp/api-tunnel.log /tmp/expo.log /tmp/expo-native.log /tmp/expo-web.log /tmp/web-tunnel.log /tmp/android-emulator.log /tmp/serve-emu.log /tmp/android-tunnel.log /tmp/mobile-sync.log /tmp/api-sync.log /tmp/mobile-dev-cloud-sync-runner.log; do
             if [ -f "$file" ]; then
               echo "<details><summary>$(basename "$file")</summary>" >> "$GITHUB_STEP_SUMMARY"
               echo '````text`' >> "$GITHUB_STEP_SUMMARY"
