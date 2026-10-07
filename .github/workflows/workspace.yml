@@ -273,6 +273,7 @@ jobs:
           for i in $(seq 1 60); do WEB_URL=$(grep -oE 'https://[-a-z0-9]+\.trycloudflare\.com' /tmp/web-tunnel.log | head -1 || true); [ -n "$WEB_URL" ] && break; sleep 2; done
           test -n "${WEB_URL:-}" || { cat /tmp/web-tunnel.log; exit 1; }
           echo "url=$WEB_URL" >> "$GITHUB_OUTPUT"
+          echo "WEB_URL=$WEB_URL" >> "$GITHUB_ENV"
           echo "## Mobile Dev Cloud" >> "$GITHUB_STEP_SUMMARY"
           echo "Preview: $WEB_URL" >> "$GITHUB_STEP_SUMMARY"
           echo "API: $API_URL" >> "$GITHUB_STEP_SUMMARY"
