@@ -94,6 +94,17 @@ Every external runtime dependency must have:
 
 Tunnel URLs are not considered reachable until an HTTP request succeeds.
 
+## Live source sync
+
+When Android live mode is enabled and the selected mobile/API refs are branches, the workspace periodically fetches those branches and synchronizes clean working trees while the session is running.
+
+- JavaScript/TypeScript mobile changes are picked up by the running Metro server and use Fast Refresh; no Android rebuild is required.
+- Backend source changes are picked up by the NestJS development server after the source sync.
+- Dependency manifest changes may require dependency installation/restart and are not treated as a native rebuild.
+- Changes under `android/` are synchronized but require a new Android build/install when they change native code or native dependencies.
+- If the workspace has local uncommitted changes, automatic reset is refused rather than overwriting them.
+- Commit/SHA refs remain pinned and are not automatically moved.
+
 ## Developer controls
 
 The control plane will expose:
