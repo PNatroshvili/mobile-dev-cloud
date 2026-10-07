@@ -247,7 +247,7 @@ jobs:
         if: always()
         run: |
           echo "### Runtime diagnostics" >> "$GITHUB_STEP_SUMMARY"
-          for file in /tmp/lukma-api.log /tmp/api-tunnel.log /tmp/expo.log /tmp/web-tunnel.log; do
+          for file in /tmp/lukma-api.log /tmp/api-tunnel.log /tmp/expo.log /tmp/web-tunnel.log /tmp/android-emulator.log; do
             if [ -f "$file" ]; then
               echo "<details><summary>$(basename "$file")</summary>" >> "$GITHUB_STEP_SUMMARY"
               echo '````text`' >> "$GITHUB_STEP_SUMMARY"
@@ -264,5 +264,6 @@ jobs:
           if [ -f /tmp/web-tunnel.pid ]; then kill "$(cat /tmp/web-tunnel.pid)" || true; fi
           if [ -f /tmp/api-tunnel.pid ]; then kill "$(cat /tmp/api-tunnel.pid)" || true; fi
           if [ -f /tmp/expo.pid ]; then kill "$(cat /tmp/expo.pid)" || true; fi
+          if [ -f /tmp/android-emulator.pid ]; then kill "$(cat /tmp/android-emulator.pid)" || true; fi
           if [ -f /tmp/lukma-api.pid ]; then kill "$(cat /tmp/lukma-api.pid)" || true; fi
           docker compose down --volumes --remove-orphans || true
