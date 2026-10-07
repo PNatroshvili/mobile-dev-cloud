@@ -31,7 +31,7 @@ export async function GET() {
 
     if (!run) return NextResponse.json({ run: null });
 
-    let runtime = { previewUrl: null as string | null, apiUrl: null as string | null, androidUrl: null as string | null, mobileRepo: null as string | null, mobileRef: null as string | null, apiRepo: null as string | null, apiRef: null as string | null, minutes: null as string | null, stage: null as string | null, android: false };
+    let runtime = extractRuntime("");
     let logs: string[] = [];
     let currentStep: string | null = null;
     let error: string | null = null;
@@ -68,8 +68,8 @@ export async function GET() {
         stage: currentStep ?? runtime.stage,
         phase: runtimePhase(run.status, run.conclusion, currentStep, runtime.stage),
         error,
-        config: { mobile_repo: runtime.mobileRepo, mobile_ref: runtime.mobileRef, api_repo: runtime.apiRepo, api_ref: runtime.apiRef, minutes: runtime.minutes },
-      runtime: { backend: Boolean(runtime.apiUrl), api_tunnel: Boolean(runtime.apiUrl), expo: Boolean(runtime.previewUrl), preview: Boolean(runtime.previewUrl), android: runtime.android },
+        config: { mobile_repo: runtime.mobileRepo, mobile_ref: runtime.mobileRef, api_repo: runtime.apiRepo, api_ref: runtime.apiRef, minutes: runtime.minutes, android_emulator: runtime.androidEmulator },
+      runtime: { backend: Boolean(runtime.apiUrl), api_tunnel: Boolean(runtime.apiUrl), expo: Boolean(runtime.previewUrl), preview: Boolean(runtime.previewUrl), android: runtime.android, android_emulator: runtime.androidEmulator },
         android_url: runtime.androidUrl,
         logs,
       },
