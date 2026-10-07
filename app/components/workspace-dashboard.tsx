@@ -13,6 +13,7 @@ type WorkspaceData = {
   head_sha: string;
   preview_url: string | null;
   api_url: string | null;
+  android_url: string | null;
   stage: string | null;
   phase: string;
   error: string | null;
@@ -130,6 +131,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
   const label = statusLabel(run?.status ?? "", run?.conclusion ?? null);
   const preview = run?.preview_url ?? "";
   const apiUrl = run?.api_url ?? "";
+  const androidUrl = run?.android_url ?? "";
   const stage = run?.stage ?? label;
   const phase = run?.phase ?? "starting";
   const runtimeError = run?.error ?? "";
@@ -164,6 +166,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
           head_sha: data.run.head_sha ?? "",
           preview_url: null,
           api_url: null,
+          android_url: null,
           stage: "Starting backend",
           phase: "backend",
           error: null,
@@ -287,13 +290,15 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
           )}
         </div>
 
-        <div className={"card preview-card " + (preview ? "preview-ready" : "")}>
+        <div className={"card preview-card " + ((androidUrl || preview) ? "preview-ready" : "")}>
           <div className="card-head">
-            <div><span className="label">LIVE PREVIEW</span><h2>Browser device</h2></div>
-            <span className={"pill " + (preview ? "" : "muted")}>{preview ? "Live" : label}</span>
+            <div><span className="label">{androidUrl ? "ANDROID LIVE" : "LIVE PREVIEW"}</span><h2>{androidUrl ? "Android emulator" : "Browser device"}</h2></div>
+            <span className={"pill " + ((androidUrl || preview) ? "" : "muted")}>{androidUrl ? "Live" : preview ? "Live" : label}</span>
           </div>
           <div className="device-wrap">
-            {preview ? (
+            {androidUrl ? (
+              <iframe className="preview-frame" src={androidUrl} title="LUKMA Android emulator" allow="clipboard-read; clipboard-write" />
+            ) : preview ? (
               <iframe className="preview-frame" src={preview} title="LUKMA live preview" allow="clipboard-read; clipboard-write" />
             ) : (
               <div className="phone">
@@ -307,7 +312,8 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
             )}
           </div>
           <div className="preview-links">
-            {preview && <a className="preview-link" href={preview} target="_blank" rel="noreferrer">Open preview in a new tab ↗</a>}
+            {androidUrl && <a className="preview-link" href={androidUrl} target="_blank" rel="noreferrer">Open Android emulator ↗</a>}
+            {!androidUrl && preview && <a className="preview-link" href={preview} target="_blank" rel="noreferrer">Open preview in a new tab ↗</a>}
             {apiUrl && <a className="preview-link" href={apiUrl} target="_blank" rel="noreferrer">Open API ↗</a>}
           </div>
         </div>
