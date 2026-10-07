@@ -54,7 +54,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
   const [branch, setBranch] = useState("feature/home-discovery-foundation");
   const [loading, setLoading] = useState(false);
   const [starting, setStarting] = useState(false);
-  const [stopping, setStopping] = useState(false);
+  const [stopping, setStopping] = useState(false);\n  const [restarting, setRestarting] = useState(false);
   const [androidEmulator, setAndroidEmulator] = useState(false);
   const [message, setMessage] = useState("");
   const [run, setRun] = useState<WorkspaceData | null>(null);
@@ -198,6 +198,48 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
     }
   }
 
+  async function restartWorkspace() {
+    if (!run?.id || restarting || starting || stopping) return;
+    setRestarting(true);
+    setMessage("Restarting workspace…");
+    try {
+      const response = await fetch("/api/workspaces/" + run.id + "/restart", { method: "POST" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to restart workspace.");
+      setMessage("Workspace restart requested.");
+      if (data.run?.id) {
+        setRun({
+          id: data.run.id,
+          status: data.run.status ?? "queued",
+          conclusion: data.run.conclusion ?? null,
+          html_url: data.run.html_url ?? "",
+          head_sha: data.run.head_sha ?? "",
+          preview_url: null,
+          api_url: null,
+          android_url: null,
+          stage: "Starting backend",
+          phase: "backend",
+          error: null,
+          config: {
+            mobile_repo: data.run?.config?.mobile_repo ?? run.config.mobile_repo,
+            mobile_ref: data.run?.config?.mobile_ref ?? run.config.mobile_ref,
+            api_repo: data.run?.config?.api_repo ?? run.config.api_repo,
+            api_ref: data.run?.config?.api_ref ?? run.config.api_ref,
+            minutes: data.run?.config?.minutes ?? run.config.minutes,
+          },
+          logs: [],
+          runtime: { backend: false, api_tunnel: false, expo: false, preview: false, android: false },
+        });
+      } else {
+        setRun(null);
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to restart workspace.");
+    } finally {
+      setRestarting(false);
+    }
+  }
+
   async function stopWorkspace() {
     if (!run?.id || stopping) return;
     setStopping(true);
@@ -272,14 +314,14 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
                 </label>
               </div>
               <label className="android-toggle">
-                <input type="checkbox" checked={androidEmulator} onChange={(event) => setAndroidEmulator(event.target.checked)} disabled={active || starting || stopping} />
+                <input type="checkbox" checked={androidEmulator} onChange={(event) => setAndroidEmulator(event.target.checked)} disabled={active || starting || stopping || restarting} />
                 <span><strong>Android live emulator</strong><small>Boot a hardware-accelerated Android device and stream it in the browser.</small></span>
               </label>
               <div className="workspace-actions">
-                <button className="primary" onClick={startWorkspace} disabled={starting || stopping || active || !selectedRepo || !branch}>
+                <button className="primary" onClick={startWorkspace} disabled={starting || stopping || restarting || active || !selectedRepo || !branch}>
                   {starting ? "Starting workspace…" : active ? "Workspace running" : "Start new workspace"}
                 </button>
-                {active && <button className="secondary danger" onClick={stopWorkspace} disabled={stopping}>{stopping ? "Stopping…" : "Stop workspace"}</button>}
+                {active && <> <button className="secondary" onClick={restartWorkspace} disabled={restarting || stopping || starting}>{restarting ? "Restarting…" : "Restart workspace"}</button><button className="secondary danger" onClick={stopWorkspace} disabled={stopping || restarting}>{stopping ? "Stopping…" : "Stop workspace"}</button></>}
                 {run && !active && <button className="secondary" onClick={refreshWorkspace}>Refresh status</button>}
               </div>
               <div className="workspace-meta">
