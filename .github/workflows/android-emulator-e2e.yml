@@ -21,24 +21,25 @@ jobs:
           ls -l /dev/kvm
           grep -Eo 'vmx|svm' /proc/cpuinfo | sort -u
 
-      - name: Setup Android SDK and emulator
+      - name: Boot Android emulator from runner SDK
         run: |
           set -euo pipefail
           export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
           export ANDROID_AVD_HOME="$HOME/.android/avd"
           mkdir -p "$ANDROID_AVD_HOME"
-          export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator:$PATH"
+          export PATH="$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
+          sdkmanager --list_installed | grep -E 'platform-tools|emulator|system-images' || true
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "emulator" "platforms;android-35" "system-images;android-35;google_apis;x86_64"
-          printf "no\n" | avdmanager create avd --name mobile-dev-cloud-e2e --package "system-images;android-35;google_apis;x86_64" --force
+          sdkmanager "platform-tools" "emulator" "system-images;android-35;google_apis;x86_64"
+          printf 'no\n' | avdmanager create avd --name mobile-dev-cloud-e2e --package "system-images;android-35;google_apis;x86_64" --force
           avdmanager list avd
           test -f "$ANDROID_AVD_HOME/mobile-dev-cloud-e2e.ini"
           emulator -avd mobile-dev-cloud-e2e -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -accel on > /tmp/emulator.log 2>&1 &
           echo $! > /tmp/emulator.pid
           adb start-server
           adb wait-for-device
-          for i in $(seq 1 90); do
-            booted="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+          for i in $(seq 1 120); do
+            booted="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)
             [ "$booted" = "1" ] && break
             sleep 2
           done
