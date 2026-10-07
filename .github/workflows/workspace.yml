@@ -259,6 +259,19 @@ jobs:
           npm ci
           chmod +x android/gradlew
           test -x android/gradlew
+          if [ ! -f android/app/debug.keystore ]; then
+            keytool -genkeypair -v \
+              -keystore android/app/debug.keystore \
+              -storetype JKS \
+              -storepass android \
+              -keypass android \
+              -alias androiddebugkey \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          test -f android/app/debug.keystore
           npx expo run:android --no-bundler
           adb shell pm path ge.skup.lukma
           echo "Stage: LUKMA Android app installed"
