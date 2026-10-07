@@ -145,6 +145,7 @@ jobs:
           bun --version
           ANDROID_SERIAL="$(adb devices | awk '$2 == "device" && $1 ~ /^emulator-/ { print $1; exit }')"
           STREAM_TOKEN="$(openssl rand -hex 32)"
+          echo "STREAM_TOKEN=$STREAM_TOKEN" >> "$GITHUB_ENV"
           nohup bunx --yes serve-emu@latest --host 0.0.0.0 --port 3300 --token "$STREAM_TOKEN" --serial "$ANDROID_SERIAL" --max-fps 30 --max-size 1280 > /tmp/serve-emu.log 2>&1 &
           echo $! > /tmp/serve-emu.pid
           for i in $(seq 1 90); do
