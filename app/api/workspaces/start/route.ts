@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       api_repo: apiRepo,
       api_ref: apiRef,
       session_minutes: minutes,
-      android_emulator: androidEmulator,
+      android_emulator: String(androidEmulator),
     });
 
     let run = null;
