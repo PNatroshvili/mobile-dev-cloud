@@ -257,6 +257,8 @@ jobs:
           echo "Stage: Building and installing LUKMA Android app"
           set -euo pipefail
           npm ci
+          chmod +x android/gradlew
+          test -x android/gradlew
           npx expo run:android --no-bundler
           adb shell pm path ge.skup.lukma
           echo "Stage: LUKMA Android app installed"
