@@ -231,7 +231,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
             android_emulator: data.run?.config?.android_emulator ?? run.config.android_emulator,
           },
           logs: [],
-          runtime: { backend: false, api_tunnel: false, expo: false, preview: false, android: false },
+          runtime: { backend: false, api_tunnel: false, expo: false, preview: false, android: false, android_emulator: run.config.android_emulator },
         });
       } else {
         setRun(null);
