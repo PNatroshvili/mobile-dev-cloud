@@ -324,7 +324,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
                 </button>
                 {run && <button className="secondary" onClick={restartWorkspace} disabled={restarting || stopping || starting}>{restarting ? "Restarting…" : "Restart workspace"}</button>}
                 {active && <button className="secondary danger" onClick={stopWorkspace} disabled={stopping || restarting}>{stopping ? "Stopping…" : "Stop workspace"}</button>}
-                {run && !active && <button className="secondary" onClick={refreshWorkspace}>Refresh status</button>
+                {run && !active && <button className="secondary" onClick={refreshWorkspace}>Refresh status</button>}
               </div>
               <div className="workspace-meta">
                 <span className={"status " + tone}>{label}</span>
