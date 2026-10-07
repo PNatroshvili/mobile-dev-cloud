@@ -41,6 +41,21 @@ jobs:
       CLOUDFLARED_VERSION: 2026.10.0
       CLOUDFLARED_SHA256: d33ff2d14475178d2012c2c56beba87389ac5ded27649519f198a7d3134a99db
     steps:
+      - name: Validate GitHub App configuration
+        env:
+          APP_ID: ${{ secrets.MOBILE_DEV_CLOUD_APP_ID }}
+          PRIVATE_KEY: ${{ secrets.MOBILE_DEV_CLOUD_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APP_ID}" ]; then
+            echo "MOBILE_DEV_CLOUD_APP_ID repository secret is missing."
+            exit 1
+          fi
+          if [ -z "${PRIVATE_KEY}" ]; then
+            echo "MOBILE_DEV_CLOUD_APP_PRIVATE_KEY repository secret is missing."
+            exit 1
+          fi
+          echo "GitHub App credentials are configured."
       - name: Create scoped GitHub App token
         id: app-token
         uses: actions/create-github-app-token@v2
@@ -301,7 +316,6 @@ jobs:
 
       - name: Cleanup workspace
         if: always()
-        working-directory: api
         run: |
           if [ -f /tmp/android-tunnel.pid ]; then kill "$(cat /tmp/android-tunnel.pid)" || true; fi
           if [ -f /tmp/web-tunnel.pid ]; then kill "$(cat /tmp/web-tunnel.pid)" || true; fi
@@ -309,4 +323,6 @@ jobs:
           if [ -f /tmp/expo.pid ]; then kill "$(cat /tmp/expo.pid)" || true; fi
           if [ -f /tmp/android-emulator.pid ]; then kill "$(cat /tmp/android-emulator.pid)" || true; fi
           if [ -f /tmp/lukma-api.pid ]; then kill "$(cat /tmp/lukma-api.pid)" || true; fi
-          docker compose down --volumes --remove-orphans || true
+          if [ -f api/docker-compose.yml ]; then
+            (cd api && docker compose down --volumes --remove-orphans) || true
+          fi
