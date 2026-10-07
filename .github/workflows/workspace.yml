@@ -480,7 +480,7 @@ jobs:
         if: always()
         run: |
           echo "### Runtime diagnostics" >> "$GITHUB_STEP_SUMMARY"
-          for file in /tmp/lukma-api.log /tmp/api-tunnel.log /tmp/expo.log /tmp/expo-native.log /tmp/expo-web.log /tmp/web-tunnel.log /tmp/android-emulator.log /tmp/serve-emu.log /tmp/android-tunnel.log; do
+          for file in /tmp/lukma-api.log /tmp/api-tunnel.log /tmp/expo.log /tmp/expo-native.log /tmp/expo-web.log /tmp/web-tunnel.log /tmp/android-emulator.log /tmp/serve-emu.log /tmp/android-tunnel.log /tmp/mobile-sync.log /tmp/api-sync.log /tmp/mobile-dev-cloud-sync-runner.log; do
             if [ -f "$file" ]; then
               echo "<details><summary>$(basename "$file")</summary>" >> "$GITHUB_STEP_SUMMARY"
               echo '````text`' >> "$GITHUB_STEP_SUMMARY"
@@ -501,6 +501,7 @@ jobs:
           if [ -f /tmp/expo-web.pid ]; then kill "$(cat /tmp/expo-web.pid)" || true; fi
           if [ -f /tmp/android-emulator.pid ]; then kill "$(cat /tmp/android-emulator.pid)" || true; fi
           if [ -f /tmp/lukma-api.pid ]; then kill "$(cat /tmp/lukma-api.pid)" || true; fi
+          if [ -f /tmp/mobile-dev-cloud-sync.pid ]; then kill "$(cat /tmp/mobile-dev-cloud-sync.pid)" || true; fi
           if [ -f api/docker-compose.yml ]; then
             (cd api && docker compose down --volumes --remove-orphans) || true
           fi
