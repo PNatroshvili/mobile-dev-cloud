@@ -31,16 +31,17 @@ GitHub repository -> cloud workspace -> backend + Expo runtime -> live browser p
 9. Real LUKMA Android build/install/run verification
 10. Authenticated browser Android streaming with serve-emu
 11. Runtime readiness verification and cleanup
+12. Live source sync for Android workspaces with Metro Fast Refresh
 
 ### Next
 
-12. End-to-end Dashboard control testing against a deployed control plane
-13. Terminal/input controls and richer runtime logs
-14. Workspace UX polish and error/recovery states
-15. Production deployment and environment validation
-16. Build artifacts and downloadable APK/AAB workflow
-17. Usage limits, quotas, concurrency and abuse protection
-18. Persistent workspace history and project-level settings
+13. End-to-end Dashboard control testing against a deployed control plane
+14. Terminal/input controls and richer runtime logs
+15. Workspace UX polish and error/recovery states
+16. Production deployment and environment validation
+17. Build artifacts and downloadable APK/AAB workflow
+18. Usage limits, quotas, concurrency and abuse protection
+19. Persistent workspace history and project-level settings
 
 
 ## Current implementation
