@@ -42,7 +42,7 @@ jobs:
           adb start-server
           timeout 30s adb wait-for-device
           for i in $(seq 1 120); do
-            booted="$(timeout 10s adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)
+            booted="$(timeout 10s adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
             if [ "$booted" = "1" ]; then break; fi
             if [ "$((i % 10))" = "0" ]; then tail -n 20 /tmp/emulator.log || true; fi
             sleep 2
