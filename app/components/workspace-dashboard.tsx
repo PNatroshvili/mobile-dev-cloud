@@ -55,6 +55,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
   const [loading, setLoading] = useState(false);
   const [starting, setStarting] = useState(false);
   const [stopping, setStopping] = useState(false);
+  const [androidEmulator, setAndroidEmulator] = useState(false);
   const [message, setMessage] = useState("");
   const [run, setRun] = useState<WorkspaceData | null>(null);
 
@@ -152,6 +153,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
           apiRepo: "PNatroshvili/lukma-api",
           apiRef: "feat/auth-api",
           minutes: "30",
+          androidEmulator,
         }),
       });
       const data = await response.json();
@@ -269,6 +271,10 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
                   </select>
                 </label>
               </div>
+              <label className="android-toggle">
+                <input type="checkbox" checked={androidEmulator} onChange={(event) => setAndroidEmulator(event.target.checked)} disabled={active || starting || stopping} />
+                <span><strong>Android live emulator</strong><small>Boot a hardware-accelerated Android device and stream it in the browser.</small></span>
+              </label>
               <div className="workspace-actions">
                 <button className="primary" onClick={startWorkspace} disabled={starting || stopping || active || !selectedRepo || !branch}>
                   {starting ? "Starting workspace…" : active ? "Workspace running" : "Start new workspace"}
