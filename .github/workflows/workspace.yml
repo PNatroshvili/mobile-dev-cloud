@@ -101,6 +101,8 @@ jobs:
 
           ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
           export ANDROID_SDK_ROOT
+          sudo chmod 666 /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
           export ANDROID_AVD_HOME="$HOME/.android/avd"
           mkdir -p "$ANDROID_AVD_HOME"
           export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator:$PATH"
