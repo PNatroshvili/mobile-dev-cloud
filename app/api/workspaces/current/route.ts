@@ -6,7 +6,7 @@ function tailLogs(logs: string) {
   return logs
     .replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, "")
     .split("\n")
-    .map((line) => line.trimEnd())
+    .map((line) => line.trimEnd().replace(/(Android:\s+https:\/\/[^\s?]+\/\?token=)[^\s]+/g, "$1***"))
     .filter(Boolean)
     .slice(-14);
 }
