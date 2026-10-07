@@ -72,7 +72,7 @@ export function runtimePhase(
   if (status === "queued") return "queued";
   if (status === "completed") {
     return conclusion === "success"
-      ? "ready"
+      ? "expired"
       : conclusion === "cancelled"
         ? "cancelled"
         : "failed";
