@@ -14,6 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
       - name: Check KVM
         run: |
           set -euo pipefail
@@ -58,8 +61,29 @@ jobs:
           test -s /tmp/android-emulator.png
           echo "Android emulator boot + ADB + screenshot verification passed."
 
+      - name: Start browser emulator stream
+        run: |
+          set -euo pipefail
+          bun --version
+          TOKEN="$(openssl rand -hex 32)"
+          SERIAL="$(adb devices | awk '$2 == "device" && $1 ~ /^emulator-/ { print $1; exit }')"
+          test -n "$SERIAL"
+          nohup bunx --yes serve-emu@0.0.6 --host 0.0.0.0 --port 3300 --token "$TOKEN" --serial "$SERIAL" --max-fps 30 --max-size 1280 > /tmp/serve-emu.log 2>&1 &
+          echo $! > /tmp/serve-emu.pid
+          for i in $(seq 1 90); do
+            if curl -fsS -H "Authorization: Bearer $TOKEN" http://127.0.0.1:3300/health >/tmp/serve-emu-health.json 2>/dev/null; then break; fi
+            sleep 2
+          done
+          test -s /tmp/serve-emu-health.json
+          curl -fsS -H "Authorization: Bearer $TOKEN" http://127.0.0.1:3300/api/devices >/tmp/serve-emu-devices.json
+          curl -fsS -H "Authorization: Bearer $TOKEN" http://127.0.0.1:3300/api/screenshot --output /tmp/serve-emu-screenshot.png
+          test -s /tmp/serve-emu-screenshot.png
+          echo "Browser emulator stream server ready."
+          cat /tmp/serve-emu-health.json
       - name: Diagnostics
         if: always()
         run: |
+          if [ -f /tmp/serve-emu.log ]; then tail -n 80 /tmp/serve-emu.log; fi
           if [ -f /tmp/emulator.log ]; then tail -n 80 /tmp/emulator.log; fi
+          if [ -f /tmp/serve-emu.pid ]; then kill "$(cat /tmp/serve-emu.pid)" || true; fi
           if [ -f /tmp/emulator.pid ]; then kill "$(cat /tmp/emulator.pid)" || true; fi
