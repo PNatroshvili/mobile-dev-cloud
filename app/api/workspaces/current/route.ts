@@ -35,7 +35,8 @@ function extractRuntime(rawLogs: string) {
   const apiRef = rawLogs.match(/Workspace API ref:\s+([^\r\n]+)/)?.[1]?.trim() ?? null;
   const minutes = rawLogs.match(/Workspace minutes:\s+(\d+)/)?.[1] ?? null;
   const stages = [...rawLogs.matchAll(/Stage:\s+([^\r\n]+)/g)].map((match) => match[1].trim());
-  return { previewUrl, apiUrl, mobileRepo, mobileRef, apiRepo, apiRef, minutes, stage: stages.at(-1) ?? null };
+  const android = rawLogs.includes("Stage: Android emulator ready");
+  return { previewUrl, apiUrl, mobileRepo, mobileRef, apiRepo, apiRef, minutes, stage: stages.at(-1) ?? null, android };
 }
 
 
@@ -63,7 +64,7 @@ export async function GET() {
 
     if (!run) return NextResponse.json({ run: null });
 
-    let runtime = { previewUrl: null as string | null, apiUrl: null as string | null, mobileRepo: null as string | null, mobileRef: null as string | null, apiRepo: null as string | null, apiRef: null as string | null, minutes: null as string | null, stage: null as string | null };
+    let runtime = { previewUrl: null as string | null, apiUrl: null as string | null, mobileRepo: null as string | null, mobileRef: null as string | null, apiRepo: null as string | null, apiRef: null as string | null, minutes: null as string | null, stage: null as string | null, android: false };
     let logs: string[] = [];
     let currentStep: string | null = null;
     let error: string | null = null;
@@ -101,7 +102,7 @@ export async function GET() {
         phase: runtimePhase(run.status, run.conclusion, currentStep, runtime.stage),
         error,
         config: { mobile_repo: runtime.mobileRepo, mobile_ref: runtime.mobileRef, api_repo: runtime.apiRepo, api_ref: runtime.apiRef, minutes: runtime.minutes },
-      runtime: { backend: Boolean(runtime.apiUrl), api_tunnel: Boolean(runtime.apiUrl), expo: Boolean(runtime.previewUrl), preview: Boolean(runtime.previewUrl), android: false },
+      runtime: { backend: Boolean(runtime.apiUrl), api_tunnel: Boolean(runtime.apiUrl), expo: Boolean(runtime.previewUrl), preview: Boolean(runtime.previewUrl), android: runtime.android },
         logs,
       },
     });
