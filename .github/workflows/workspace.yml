@@ -117,6 +117,11 @@ jobs:
           export ANDROID_AVD_HOME="$HOME/.android/avd"
           mkdir -p "$ANDROID_AVD_HOME"
           export PATH="$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
+          {
+            echo "$ANDROID_SDK_ROOT/platform-tools"
+            echo "$ANDROID_SDK_ROOT/emulator"
+            echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin"
+          } >> "$GITHUB_PATH"
           sudo chmod 666 /dev/kvm
           test -r /dev/kvm && test -w /dev/kvm
           yes | sdkmanager --licenses >/dev/null || true
