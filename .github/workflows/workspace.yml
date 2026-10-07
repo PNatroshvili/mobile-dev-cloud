@@ -213,6 +213,21 @@ jobs:
           echo "API_URL=$API_URL" >> "$GITHUB_ENV"
           echo "API: $API_URL"
 
+      - name: Start Android stream tunnel
+        if: ${{ inputs.android_emulator }}
+        id: android_stream
+        run: |
+          echo "Stage: Creating Android stream tunnel"
+          set -euo pipefail
+          nohup /tmp/cloudflared tunnel --no-autoupdate --url http://127.0.0.1:3300 > /tmp/android-tunnel.log 2>&1 &
+          echo $! > /tmp/android-tunnel.pid
+          for i in $(seq 1 60); do ANDROID_URL=$(grep -oE 'https://[-a-z0-9]+\.trycloudflare\.com' /tmp/android-tunnel.log | head -1 || true); [ -n "$ANDROID_URL" ] && break; sleep 2; done
+          test -n "${ANDROID_URL:-}" || { cat /tmp/android-tunnel.log; cat /tmp/serve-emu.log; exit 1; }
+          ANDROID_BROWSER_URL="${ANDROID_URL}/?token=${STREAM_TOKEN}"
+          echo "ANDROID_STREAM_URL=$ANDROID_BROWSER_URL" >> "$GITHUB_ENV"
+          echo "Android: $ANDROID_BROWSER_URL"
+          echo "## Android Emulator" >> "$GITHUB_STEP_SUMMARY"
+          echo "Stream: $ANDROID_BROWSER_URL" >> "$GITHUB_STEP_SUMMARY"
       - name: Start Expo web
         working-directory: mobile
         env:
@@ -273,7 +288,7 @@ jobs:
         if: always()
         run: |
           echo "### Runtime diagnostics" >> "$GITHUB_STEP_SUMMARY"
-          for file in /tmp/lukma-api.log /tmp/api-tunnel.log /tmp/expo.log /tmp/web-tunnel.log /tmp/android-emulator.log; do
+          for file in /tmp/lukma-api.log /tmp/api-tunnel.log /tmp/expo.log /tmp/web-tunnel.log /tmp/android-emulator.log /tmp/serve-emu.log /tmp/android-tunnel.log; do
             if [ -f "$file" ]; then
               echo "<details><summary>$(basename "$file")</summary>" >> "$GITHUB_STEP_SUMMARY"
               echo '````text`' >> "$GITHUB_STEP_SUMMARY"
@@ -287,6 +302,7 @@ jobs:
         if: always()
         working-directory: api
         run: |
+          if [ -f /tmp/android-tunnel.pid ]; then kill "$(cat /tmp/android-tunnel.pid)" || true; fi
           if [ -f /tmp/web-tunnel.pid ]; then kill "$(cat /tmp/web-tunnel.pid)" || true; fi
           if [ -f /tmp/api-tunnel.pid ]; then kill "$(cat /tmp/api-tunnel.pid)" || true; fi
           if [ -f /tmp/expo.pid ]; then kill "$(cat /tmp/expo.pid)" || true; fi
