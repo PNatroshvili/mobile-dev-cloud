@@ -130,7 +130,16 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
     };
   }, [run?.id]);
 
-  const selectedRepo = useMemo(() => repos.find((item) => item.full_name === repo), [repos, repo]);
+  const selectedRepo = useMemo(() => {
+    const listedRepo = repos.find((item) => item.full_name === repo);
+    if (listedRepo) return listedRepo;
+    // Keep the configured repository selectable even if GitHub omits it from /user/repos.
+    // The start API and workflow still validate ownership and actual repository access.
+    if (login && repo.startsWith(`${login}/`)) {
+      return { id: -1, full_name: repo, private: false, default_branch: branch };
+    }
+    return undefined;
+  }, [repos, repo, login, branch]);
   const active = Boolean(run && run.status !== "completed");
   const tone = statusTone(run?.status ?? "", run?.conclusion ?? null);
   const label = statusLabel(run?.status ?? "", run?.conclusion ?? null);
@@ -308,7 +317,7 @@ export function WorkspaceDashboard({ connected, login }: { connected: boolean; l
               <div className="controls">
                 <label>Repository
                   <select value={repo} onChange={(event) => setRepo(event.target.value)} disabled={active}>
-                    {repos.length === 0 && <option value={repo}>{repo}</option>}
+                    {!repos.some((item) => item.full_name === repo) && <option value={repo}>{repo}</option>}
                     {repos.map((item) => <option key={item.id} value={item.full_name}>{item.full_name}</option>)}
                   </select>
                 </label>
