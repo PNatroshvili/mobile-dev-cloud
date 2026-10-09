@@ -37,7 +37,22 @@ export async function listRepositories(token: string) {
 }
 
 export async function listBranches(token: string, owner: string, repo: string) {
-  return githubFetch<GitHubBranch[]>(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/branches?per_page=100`, token);
+  const branches: GitHubBranch[] = [];
+  const encodedOwner = encodeURIComponent(owner);
+  const encodedRepo = encodeURIComponent(repo);
+
+  // GitHub paginates branch lists at 100 entries. Load all pages so valid
+  // feature branches aren't silently replaced by the first Dependabot branch.
+  for (let page = 1; ; page += 1) {
+    const batch = await githubFetch<GitHubBranch[]>(
+      `/repos/${encodedOwner}/${encodedRepo}/branches?per_page=100&page=${page}`,
+      token,
+    );
+    branches.push(...batch);
+    if (batch.length < 100) break;
+  }
+
+  return branches;
 }
 
 export async function dispatchWorkflow(
